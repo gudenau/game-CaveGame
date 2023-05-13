@@ -1,0 +1,4 @@
+*.7z
+.gradle/
+.idea/
+build/
