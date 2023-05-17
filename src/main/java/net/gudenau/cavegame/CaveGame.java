@@ -3,6 +3,7 @@ package net.gudenau.cavegame;
 import net.gudenau.cavegame.actor.LivingActor;
 import net.gudenau.cavegame.actor.MinerActor;
 import net.gudenau.cavegame.actor.ResourceActor;
+import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.ResourceLoader;
@@ -26,8 +27,11 @@ import java.util.stream.Stream;
 public final class CaveGame {
     public static final String NAMESPACE = "cave_game";
 
+    // I'm ignoring the warnings in this method because it's going to be remade at some point.
     public static void main(String[] args) {
         Treachery.ensureInitialized(Registries.class, Tiles.class, Materials.class);
+
+        Wooting.initialize();
 
         var loader = new ResourceLoader();
         loader.registerProvider(NAMESPACE, ClassPathResourceProvider.of(CaveGame.class));

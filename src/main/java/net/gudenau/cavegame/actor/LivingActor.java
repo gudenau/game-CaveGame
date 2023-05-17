@@ -218,7 +218,7 @@ public class LivingActor extends Actor {
      * @param goal The tile to navigate to
      * @return True if pathfinding succeeded
      */
-    private boolean navigateToSide(TilePos goal) {
+    public boolean navigateToSide(TilePos goal) {
         if(level.tile(goal).passable()) {
             return navigate(goal);
         } else {

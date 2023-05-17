@@ -14,4 +14,6 @@ module net.gudenau.cavegame {
     requires it.unimi.dsi.fastutil;
 
     requires com.google.gson;
+
+    requires net.gudenau.cavegame.wooting;
 }

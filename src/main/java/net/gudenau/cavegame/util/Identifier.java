@@ -67,7 +67,6 @@ public record Identifier(
      */
     @NotNull
     public Identifier append(@NotNull String suffix) {
-        validatePath(suffix);
         return new Identifier(namespace, path + suffix);
     }
 
