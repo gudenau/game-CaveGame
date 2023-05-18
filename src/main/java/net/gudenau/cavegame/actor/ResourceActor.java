@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.actor;
 
+import net.gudenau.cavegame.ai.ResourceJob;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.material.Material;
 import net.gudenau.cavegame.util.TilePos;
@@ -57,5 +58,10 @@ public class ResourceActor extends Actor {
     @NotNull
     public Material resource() {
         return material;
+    }
+
+    @Override
+    public void onSpawned() {
+        level.jobManager().enqueueJob(new ResourceJob(this));
     }
 }

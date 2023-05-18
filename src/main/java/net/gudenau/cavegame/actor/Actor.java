@@ -97,4 +97,12 @@ public abstract class Actor {
     public void remove() {
         needsRemoval = true;
     }
+
+    @NotNull
+    public Level level() {
+        return level;
+    }
+
+    public void onSpawned() {
+    }
 }

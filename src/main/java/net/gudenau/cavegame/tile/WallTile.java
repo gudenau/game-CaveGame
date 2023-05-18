@@ -5,7 +5,9 @@ import net.gudenau.cavegame.material.Material;
 import net.gudenau.cavegame.material.Materials;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.random.RandomGenerator;
 
 /**
  * A tile that represents a wall.
@@ -31,7 +33,10 @@ public class WallTile extends Tile implements MineableTile {
 
     @Override
     @NotNull
-    public List<@NotNull Material> resources() {
-        return List.of(Materials.ORE, Materials.ORE);
+    public List<@NotNull Material> resources(@NotNull RandomGenerator random) {
+        var count = random.nextInt(1, 3);
+        var resources = new Material[count];
+        Arrays.fill(resources, Materials.ORE);
+        return List.of(resources);
     }
 }

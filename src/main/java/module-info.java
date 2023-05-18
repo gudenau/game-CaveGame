@@ -15,5 +15,7 @@ module net.gudenau.cavegame {
 
     requires com.google.gson;
 
+    requires net.jodah.typetools;
+
     requires net.gudenau.cavegame.wooting;
 }

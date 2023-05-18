@@ -7,6 +7,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.gudenau.cavegame.actor.Actor;
 import net.gudenau.cavegame.actor.LivingActor;
 import net.gudenau.cavegame.actor.ResourceActor;
+import net.gudenau.cavegame.ai.Job;
+import net.gudenau.cavegame.ai.JobManager;
+import net.gudenau.cavegame.ai.MiningJob;
 import net.gudenau.cavegame.tile.MineableTile;
 import net.gudenau.cavegame.tile.Tile;
 import net.gudenau.cavegame.tile.Tiles;
@@ -71,6 +74,9 @@ public final class Level {
      */
     @NotNull
     private final RandomGenerator random = new LockedRandom();
+
+    @NotNull
+    private final JobManager jobManager = new JobManager();
 
     /**
      * Creates a new level with the provided size that is filled with {@link Tiles#BEDROCK}.
@@ -182,6 +188,7 @@ public final class Level {
     public void tick() {
         actors.forEach(Actor::tick);
         actors.addAll(pendingActors);
+        pendingActors.forEach(Actor::onSpawned);
         pendingActors.clear();
         actors.stream()
             .filter(Actor::needsRemoval)
@@ -261,6 +268,10 @@ public final class Level {
         return Optional.empty();
     }
 
+    public Optional<TilePos> findNearestTile(TilePos position, Tile tile) {
+        return findNearestTile(position, (other) -> other == tile);
+    }
+
     /**
      * Checks if the provided {@link TilePos} is in bounds of this level.
      *
@@ -292,7 +303,7 @@ public final class Level {
             return;
         }
 
-        tile.resources().stream()
+        tile.resources(random).stream()
             .map((resource) -> new ResourceActor(resource, pos, this))
             .forEach(this::spawn);
         tile(pos, mineable.remainingTile());
@@ -306,5 +317,10 @@ public final class Level {
     @NotNull
     public RandomGenerator random() {
         return random;
+    }
+
+    @NotNull
+    public JobManager jobManager() {
+        return jobManager;
     }
 }

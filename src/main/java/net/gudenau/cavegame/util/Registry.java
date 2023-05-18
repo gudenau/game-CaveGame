@@ -18,7 +18,7 @@ import java.util.stream.Stream;
  *
  * @param <T> The type of the registry
  */
-public final class Registry<T> {
+public sealed class Registry<T> permits CallbackRegistry {
     /**
      * A registry entry.
      *
@@ -50,6 +50,8 @@ public final class Registry<T> {
      * The shared lock used to ensure this registry is thread safe.
      */
     private final SharedLock lock = new SharedLock();
+
+    protected Registry() {}
 
     /**
      * Registers a new value in this registry.

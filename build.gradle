@@ -32,6 +32,7 @@ allprojects {
 dependencies {
     implementation "it.unimi.dsi:fastutil:${project.fastutilVersion}"
     implementation "com.google.code.gson:gson:${project.gsonVersion}"
+    implementation "net.jodah:typetools:0.6.3"
 
     implementation project(':wooting')
 }

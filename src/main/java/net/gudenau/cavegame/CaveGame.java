@@ -3,6 +3,8 @@ package net.gudenau.cavegame;
 import net.gudenau.cavegame.actor.LivingActor;
 import net.gudenau.cavegame.actor.MinerActor;
 import net.gudenau.cavegame.actor.ResourceActor;
+import net.gudenau.cavegame.ai.JobTypes;
+import net.gudenau.cavegame.ai.MiningJob;
 import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
@@ -10,6 +12,7 @@ import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.material.Materials;
 import net.gudenau.cavegame.tile.Tile;
 import net.gudenau.cavegame.tile.Tiles;
+import net.gudenau.cavegame.tile.WallTile;
 import net.gudenau.cavegame.util.*;
 
 import javax.imageio.ImageIO;
@@ -29,7 +32,7 @@ public final class CaveGame {
 
     // I'm ignoring the warnings in this method because it's going to be remade at some point.
     public static void main(String[] args) {
-        Treachery.ensureInitialized(Registries.class, Tiles.class, Materials.class);
+        Treachery.ensureInitialized(Registries.class, Tiles.class, Materials.class, JobTypes.class);
 
         Wooting.initialize();
 
@@ -55,7 +58,7 @@ public final class CaveGame {
             .map(CompletableFuture::join)
             .collect(Collectors.toUnmodifiableMap((entry) -> Registries.TILE.object(entry.getKey()).get(), Map.Entry::getValue));
 
-        var level = new Level(32, 32);
+        var level = new Level(16, 16);
         TilePos.iterator(1, 1, level.width() - 1, level.height() - 1)
             .forEachRemaining((pos) -> level.tile(pos, Tiles.DIRT_WALL));
 
@@ -65,10 +68,19 @@ public final class CaveGame {
         level.tile(new TilePos(4, 5), Tiles.FLOOR);
         level.tile(new TilePos(6, 5), Tiles.FLOOR);
 
-        level.spawn(new MinerActor(5.5, 4.5, level));
-        level.spawn(new MinerActor(5.5, 6.5, level));
-        level.spawn(new MinerActor(4.5, 5.5, level));
-        level.spawn(new MinerActor(6.5, 5.5, level));
+        for(int i = 0; i < 2; i++) {
+            level.spawn(new MinerActor(5.5, 4.5, level));
+            level.spawn(new MinerActor(5.5, 6.5, level));
+            level.spawn(new MinerActor(4.5, 5.5, level));
+            level.spawn(new MinerActor(6.5, 5.5, level));
+        }
+
+        TilePos.iterator(0, 0, level.width(), level.height()).forEachRemaining((pos) -> {
+            var tile = level.tile(pos);
+            if(tile instanceof WallTile wall && wall.isMineable()) {
+                level.jobManager().enqueueJob(new MiningJob(tile, pos));
+            }
+        });
 
         var state = new Object() {
             BufferedImage buffer = null;

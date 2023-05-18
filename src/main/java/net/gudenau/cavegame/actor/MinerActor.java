@@ -39,6 +39,7 @@ public class MinerActor extends LivingActor {
         super(x, y, level);
     }
 
+    /*
     @Override
     public void tick() {
         super.tick();
@@ -117,4 +118,5 @@ public class MinerActor extends LivingActor {
             }
         }
     }
+     */
 }

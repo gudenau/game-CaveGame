@@ -7,6 +7,7 @@ import net.gudenau.cavegame.util.Registries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.random.RandomGenerator;
 
 /**
  * The base tile class.
@@ -83,7 +84,7 @@ public class Tile {
      * @return The dropped resources
      */
     @NotNull
-    public List<@NotNull Material> resources() {
+    public List<@NotNull Material> resources(@NotNull RandomGenerator random) {
         return List.of();
     }
 

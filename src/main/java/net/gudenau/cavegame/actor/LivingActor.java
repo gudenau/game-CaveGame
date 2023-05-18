@@ -2,10 +2,12 @@ package net.gudenau.cavegame.actor;
 
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import net.gudenau.cavegame.ai.Job;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.util.MathUtils;
 import net.gudenau.cavegame.util.TilePos;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -22,6 +24,9 @@ public class LivingActor extends Actor {
      * The nodes used for pathfinding. The actor will follow these in order.
      */
     protected Queue<TilePos> nodes = new LinkedList<>();
+
+    @Nullable
+    private Job job = null;
 
     /**
      * Creates a new living actor.
@@ -44,6 +49,13 @@ public class LivingActor extends Actor {
             var node = nodes.remove();
             this.x = node.x() + 0.5;
             this.y = node.y() + 0.5;
+        } else if(job == null) {
+            job = level.jobManager().findJob(this).orElse(null);
+            if(job != null) {
+                job.start(this);
+            }
+        } else {
+            job.tick(this);
         }
     }
 
@@ -87,13 +99,20 @@ public class LivingActor extends Actor {
         }
     }
 
+    public void removeJob(boolean failed) {
+        if(failed) {
+            level.jobManager().enqueueJob(job);
+        }
+        job = null;
+    }
+
     /**
      * The results of a pathfinding operation.
      *
      * @param path The list of positions that represent the path to traverse
      * @param cost The cost of the path
      */
-    protected record PathResult(
+    public record PathResult(
         @NotNull List<TilePos> path,
         long cost
     ){
@@ -111,7 +130,7 @@ public class LivingActor extends Actor {
      * @param goal The navigation target
      * @return The {@link PathResult} if a path was found, empty otherwise
      */
-    protected Optional<PathResult> calculatePath(@NotNull TilePos goal) {
+    public Optional<PathResult> calculatePath(@NotNull TilePos goal) {
         var start = tilePos();
         //System.out.println("Attempting to pathfind to " + goal + " from " + start);
         if(goal.equals(start)) {
@@ -210,6 +229,20 @@ public class LivingActor extends Actor {
             nodes.addAll(result.get().path());
         }
         return result.isPresent();
+    }
+
+    /**
+     * Calculates the cost to the cheapest side of a tile or the tile itself if it's passable.
+     *
+     * @param goal The tile to navigate to
+     * @return True if pathfinding succeeded
+     */
+    public Optional<PathResult> calculateCheapestPathToSide(TilePos goal) {
+        if(level.tile(goal).passable()) {
+            return calculatePath(goal);
+        } else {
+            return calculateCheapestPath(goal.neighbors().stream().filter((pos) -> level.tile(pos).passable()).toList());
+        }
     }
 
     /**

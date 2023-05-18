@@ -1,10 +1,13 @@
 package net.gudenau.cavegame.util;
 
 import net.gudenau.cavegame.CaveGame;
+import net.gudenau.cavegame.ai.JobType;
 import net.gudenau.cavegame.material.Material;
 import net.gudenau.cavegame.tile.Tile;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.function.BiConsumer;
 
 /**
  * All of the default registries for the game.
@@ -34,6 +37,8 @@ public final class Registries {
      */
     public static final Registry<Material> RESOURCE = registry("resource");
 
+    public static final Registry<JobType<?>> JOB_TYPE = registry("job_type");
+
     /**
      * Creates and registers a new registry.
      *
@@ -45,6 +50,14 @@ public final class Registries {
     @NotNull
     private static <T> Registry<T> registry(String name) {
         var registry = new Registry<T>();
+        REGISTRY.register(new Identifier(CaveGame.NAMESPACE, name), registry);
+        return registry;
+    }
+
+    @Contract("_, _ -> new")
+    @NotNull
+    private static <T> Registry<T> callbackRegistry(String name, BiConsumer<Identifier, T> callback) {
+        var registry = new CallbackRegistry<T>(callback);
         REGISTRY.register(new Identifier(CaveGame.NAMESPACE, name), registry);
         return registry;
     }
