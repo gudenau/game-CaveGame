@@ -30,6 +30,10 @@ public class JobManager {
         });
     }
 
+    public boolean hasJobs() {
+        return jobs.values().stream().noneMatch(Set::isEmpty);
+    }
+
     private record JobCost(Job job, long cost){
         private boolean valid() {
             return cost >= 0;

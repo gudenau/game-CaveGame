@@ -2,6 +2,7 @@ package net.gudenau.cavegame.ai;
 
 import net.gudenau.cavegame.actor.LivingActor;
 import net.gudenau.cavegame.actor.ResourceActor;
+import net.gudenau.cavegame.level.Pathfinder;
 import net.gudenau.cavegame.tile.Tiles;
 import org.jetbrains.annotations.NotNull;
 
@@ -14,8 +15,8 @@ public record ResourceJob(
 
     @Override
     public long estimateCost(@NotNull LivingActor actor) {
-        var cost = actor.calculatePath(resource.tilePos());
-        return cost.map(LivingActor.PathResult::cost).orElse(-1L);
+        var cost = actor.level().pathfinder().calculatePath(actor, resource.tilePos());
+        return cost.map(Pathfinder.PathResult::cost).orElse(-1L);
     }
 
     @Override

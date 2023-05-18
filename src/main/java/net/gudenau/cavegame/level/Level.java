@@ -19,6 +19,7 @@ import net.gudenau.cavegame.util.LockedRandom;
 import net.gudenau.cavegame.util.TilePos;
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.random.RandomGenerator;
@@ -77,6 +78,8 @@ public final class Level {
 
     @NotNull
     private final JobManager jobManager = new JobManager();
+
+    private final Pathfinder pathfinder = new Pathfinder(this);
 
     /**
      * Creates a new level with the provided size that is filled with {@link Tiles#BEDROCK}.
@@ -180,12 +183,15 @@ public final class Level {
         } else {
             tileState.remove(pos.asLong());
         }
+
+        pathfinder.tileModified(pos, existing, tile);
     }
 
     /**
      * Ticks everything in this level that requires ticking.
      */
     public void tick() {
+        pathfinder.purgeOld();
         actors.forEach(Actor::tick);
         actors.addAll(pendingActors);
         pendingActors.forEach(Actor::onSpawned);
@@ -322,5 +328,10 @@ public final class Level {
     @NotNull
     public JobManager jobManager() {
         return jobManager;
+    }
+
+    @NotNull
+    public Pathfinder pathfinder() {
+        return pathfinder;
     }
 }
