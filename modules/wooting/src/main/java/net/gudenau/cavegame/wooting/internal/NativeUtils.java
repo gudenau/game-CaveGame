@@ -37,12 +37,17 @@ public final class NativeUtils {
     /**
      * Gets a String or null from the passed memory segment.
      *
-     * @param segment The segment to read
+     * @param pointer The segment to read
      * @return The string or null
      */
     @Nullable
-    public static String string(@NotNull MemorySegment segment) {
-        return segment.equals(MemorySegment.NULL) ? null : segment.getUtf8String(0);
+    public static String string(@NotNull MemorySegment pointer) {
+        //TODO Find a better way, this is hacky.
+        if (pointer.equals(MemorySegment.NULL)) {
+            return null;
+        }
+        var segment = MemorySegment.ofAddress(pointer.address(), Long.MAX_VALUE, pointer.scope());
+        return segment.getUtf8String(0);
     }
 
     /**

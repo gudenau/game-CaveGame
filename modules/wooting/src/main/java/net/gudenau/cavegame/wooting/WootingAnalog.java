@@ -4,6 +4,8 @@ import net.gudenau.cavegame.wooting.internal.Dummy;
 import net.gudenau.cavegame.wooting.internal.NativeUtils;
 import org.intellij.lang.annotations.MagicConstant;
 
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
@@ -174,11 +176,11 @@ WootingAnalogResult wooting_analog_clear_device_event_cb(void);
      * * `ret>=0`: The number of connected devices that have been filled into the buffer
      * * `WootingAnalogResult::UnInitialized`: Indicates that the AnalogSDK hasn't been initialised
      */
-    static int wooting_analog_get_connected_devices_info(DeviceInfoFFI.Buffer buffer) {
+    static int wooting_analog_get_connected_devices_info(MemorySegment buffer) {
         try {
             return (int) WOOTING_ANALOG_GET_CONNECTED_DEVICES_INFO.invokeExact(
-                buffer.segment(),
-                buffer.capacity()
+                buffer,
+                (int) Math.min(buffer.byteSize() / ValueLayout.ADDRESS.byteSize(), Integer.MAX_VALUE)
             );
         } catch (Throwable e) {
             throw new RuntimeException("Failed to invoke wooting_analog_get_connected_devices_info", e);

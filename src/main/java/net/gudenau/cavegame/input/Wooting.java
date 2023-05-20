@@ -1,6 +1,8 @@
 package net.gudenau.cavegame.input;
 
 import java.lang.foreign.Arena;
+import java.lang.foreign.MemoryLayout;
+import java.lang.foreign.ValueLayout;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -41,8 +43,8 @@ public final class Wooting {
         wooting_analog_set_keycode_mode(WootingAnalog_KeycodeType_HID);
 
         try(var arena = Arena.openConfined()) {
-            var buffer = new DeviceInfoFFI.Buffer(arena, result);
-            result = wooting_analog_get_connected_devices_info(buffer);
+            var pointers = arena.allocateArray(ValueLayout.ADDRESS, deviceCount);
+            result = wooting_analog_get_connected_devices_info(pointers);
             if(result != deviceCount) {
                 throw new RuntimeException("Wooting SDK returned an unexpected amount of device info");
             } else if(result < 0) {
@@ -50,14 +52,15 @@ public final class Wooting {
             }
 
             System.out.println("Found " + deviceCount + " Wooting compatible keyboard" + (deviceCount == 1 ? "" : "s") + ":");
-            buffer.stream()
-                .map((info) -> "%s: %s (%02X:%02X)".formatted(
+            for(int i = 0; i < deviceCount; i++) {
+                var info = new DeviceInfoFFI(pointers.getAtIndex(ValueLayout.ADDRESS, i));
+                System.out.printf("%s: %s (%02X:%02X)",
                     info.manufacturer_name(),
                     info.device_name(),
                     info.vendor_id(),
                     info.product_id()
-                ))
-                .forEachOrdered(System.out::println);
+                );
+            }
         }
     }
 
