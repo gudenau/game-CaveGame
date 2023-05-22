@@ -1,10 +1,13 @@
 package net.gudenau.cavegame.actor;
 
 import net.gudenau.cavegame.level.Level;
+import net.gudenau.cavegame.tile.Tile;
 import net.gudenau.cavegame.util.TilePos;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * An actor that can exist in a level. Used for anything that is not based on tiles, like resources, player characters
@@ -19,17 +22,25 @@ public abstract class Actor {
     /**
      * The X position of this actor.
      */
-    protected double x;
+    private double x;
 
     /**
      * The Y position of this actor.
      */
-    protected double y;
+    private double y;
+
+    protected double facing = 0;
 
     /**
      * A flag that marks this actor for removal at the end of a tick.
      */
     private boolean needsRemoval = false;
+
+    @Nullable
+    private LivingActor holder;
+
+    @Nullable
+    private TilePos tilePos;
 
     /**
      * Creates a new actor instance at the provided position with the provided level instance.
@@ -79,7 +90,10 @@ public abstract class Actor {
      */
     @NotNull
     public final TilePos tilePos() {
-        return new TilePos(x, y);
+        if(tilePos != null) {
+            return tilePos;
+        }
+        return tilePos = new TilePos(x, y);
     }
 
     /**
@@ -104,5 +118,51 @@ public abstract class Actor {
     }
 
     public void onSpawned() {
+    }
+
+    @NotNull
+    protected Optional<LivingActor> holder() {
+        return Optional.ofNullable(holder);
+    }
+
+    protected void holder(@Nullable LivingActor actor) {
+        holder = actor;
+    }
+
+    public boolean isHeld() {
+        return holder != null;
+    }
+
+    protected void pos(double x, double y) {
+        this.x = x;
+        this.y = y;
+        tilePos = null;
+    }
+
+    public double posX() {
+        return x;
+    }
+
+    public double posY() {
+        return y;
+    }
+
+    public void removed() {
+        if(holder != null) {
+            holder.drop(this);
+            holder = null;
+        }
+    }
+
+    public boolean isAdjacentTo(@NotNull Tile tile) {
+        return tilePos().neighbors().stream()
+            .map(level::tile)
+            .anyMatch((neighbor) -> neighbor == tile);
+    }
+
+    public Optional<TilePos> findAdjacentTile(@NotNull Tile tile) {
+        return tilePos().neighbors().stream()
+            .filter((pos) -> level.tile(pos) == tile)
+            .findAny();
     }
 }

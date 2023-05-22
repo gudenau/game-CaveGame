@@ -3,12 +3,15 @@ package net.gudenau.cavegame.actor;
 import net.gudenau.cavegame.ai.Job;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.level.Pathfinder;
+import net.gudenau.cavegame.tile.Tile;
 import net.gudenau.cavegame.util.TilePos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector2d;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
 
 /**
@@ -28,6 +31,9 @@ public class LivingActor extends Actor {
     @Nullable
     private Job job = null;
 
+    @Nullable
+    private Actor heldActor;
+
     /**
      * Creates a new living actor.
      *
@@ -39,6 +45,22 @@ public class LivingActor extends Actor {
         super(x, y, level);
     }
 
+    public boolean pickup(@NotNull Actor actor) {
+        if(heldActor != null || actor.holder().isPresent()) {
+            return false;
+        }
+
+        var ourPos = tilePos();
+        var theirPos = actor.tilePos();
+        if(!(ourPos.equals(theirPos) || ourPos.isAdjacentTo(theirPos))) {
+            return false;
+        }
+
+        actor.holder(this);
+        heldActor = actor;
+        return true;
+    }
+
     @Override
     public void tick() {
         super.tick();
@@ -47,8 +69,8 @@ public class LivingActor extends Actor {
         if(!nodes.isEmpty()) {
             //TODO Make this smoother
             var node = nodes.remove();
-            this.x = node.x() + 0.5;
-            this.y = node.y() + 0.5;
+            facing = Math.atan2(node.y() - posY(), node.x() - posX());
+            pos(node.x() + 0.5, node.y() + 0.5);
         } else if(job == null) {
             job = level.jobManager().findJob(this).orElse(null);
             if(job != null) {
@@ -56,6 +78,12 @@ public class LivingActor extends Actor {
             }
         } else {
             job.tick(this);
+        }
+
+        if(heldActor != null) {
+            var heldX = x() + Math.cos(facing) * 0.1;
+            var heldY = y() + Math.sin(facing) * 0.1;
+            heldActor.pos(heldX, heldY);
         }
     }
 
@@ -69,7 +97,7 @@ public class LivingActor extends Actor {
     }
 
     public void removeJob(boolean failed) {
-        if(failed) {
+        if(failed && job != null) {
             level.jobManager().enqueueJob(job);
         }
         job = null;
@@ -136,5 +164,15 @@ public class LivingActor extends Actor {
     void navigate(@NotNull Pathfinder.PathResult result) {
         nodes.clear();
         nodes.addAll(result.path());
+    }
+
+    public void drop(@NotNull Actor actor) {
+        if(heldActor == actor) {
+            heldActor = null;
+        }
+    }
+
+    public Optional<Actor> heldActor() {
+        return Optional.ofNullable(heldActor);
     }
 }

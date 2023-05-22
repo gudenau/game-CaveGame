@@ -198,6 +198,7 @@ public final class Level {
         pendingActors.clear();
         actors.stream()
             .filter(Actor::needsRemoval)
+            .peek(Actor::removed)
             .toList()
             .forEach(actors::remove);
     }

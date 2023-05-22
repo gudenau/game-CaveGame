@@ -1,15 +1,14 @@
 package net.gudenau.cavegame;
 
-import net.gudenau.cavegame.actor.LivingActor;
 import net.gudenau.cavegame.actor.MinerActor;
 import net.gudenau.cavegame.actor.ResourceActor;
 import net.gudenau.cavegame.ai.JobTypes;
 import net.gudenau.cavegame.ai.MiningJob;
 import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.level.Level;
+import net.gudenau.cavegame.material.Materials;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.ResourceLoader;
-import net.gudenau.cavegame.material.Materials;
 import net.gudenau.cavegame.tile.Tile;
 import net.gudenau.cavegame.tile.Tiles;
 import net.gudenau.cavegame.tile.WallTile;
@@ -20,9 +19,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -68,12 +65,16 @@ public final class CaveGame {
         level.tile(new TilePos(4, 5), Tiles.FLOOR);
         level.tile(new TilePos(6, 5), Tiles.FLOOR);
 
+        level.spawn(new MinerActor(5.5, 4.5, level));
+
+        /*
         for(int i = 0; i < 2; i++) {
             level.spawn(new MinerActor(5.5, 4.5, level));
             level.spawn(new MinerActor(5.5, 6.5, level));
             level.spawn(new MinerActor(4.5, 5.5, level));
             level.spawn(new MinerActor(6.5, 5.5, level));
         }
+         */
 
         TilePos.iterator(0, 0, level.width(), level.height()).forEachRemaining((pos) -> {
             var tile = level.tile(pos);
@@ -132,6 +133,7 @@ public final class CaveGame {
                 });
 
                 level.actors().forEach((actor) -> {
+                    /*
                     if (actor instanceof LivingActor) {
                         @SuppressWarnings("unchecked")
                         var nodes = (LinkedList<TilePos>) (Queue<TilePos>) Treachery.field(actor, "nodes", Queue.class);
@@ -141,6 +143,7 @@ public final class CaveGame {
                             g.fillRect((node.x() << 5) + 8, (node.y() << 5) + 8, 16, 16);
                         }
                     }
+                     */
 
                     var x = actor.x() * 32;
                     var y = actor.y() * 32;

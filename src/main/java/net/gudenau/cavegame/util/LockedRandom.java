@@ -6,7 +6,7 @@ import java.util.random.RandomGenerator;
 /**
  * A thread safe random wrapper.
  */
-public class LockedRandom implements RandomGenerator {
+public final class LockedRandom implements RandomGenerator {
     /**
      * The backing random instance.
      */
