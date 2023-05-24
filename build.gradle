@@ -35,6 +35,7 @@ dependencies {
     implementation "net.jodah:typetools:0.6.3"
 
     implementation project(':wooting')
+    implementation project(':logger')
 }
 
 apply from: rootProject.projectDir.toPath().resolve(java.nio.file.Path.of('scripts', 'lwjgl.gradle')).toAbsolutePath().toString()

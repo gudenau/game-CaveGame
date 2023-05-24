@@ -42,7 +42,6 @@ public record MiningJob(
             }
         } else if(!actor.navigateToSide(position)) {
             actor.removeJob(true);
-            System.out.println("Failed to navigate in job " + this);
         }
     }
 }

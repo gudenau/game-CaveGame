@@ -1,17 +1,17 @@
 package net.gudenau.cavegame.input;
 
-import java.lang.foreign.Arena;
-import java.lang.foreign.MemoryLayout;
-import java.lang.foreign.ValueLayout;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
+import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.wooting.DeviceInfoFFI;
+
+import java.lang.foreign.Arena;
+import java.lang.foreign.ValueLayout;
 
 import static net.gudenau.cavegame.wooting.WootingAnalog.*;
 import static net.gudenau.cavegame.wooting.WootingCommon.*;
 
 public final class Wooting {
+    private static final Logger LOGGER = Logger.forClass(Wooting.class);
+
     private static volatile boolean initialized = false;
     private static int deviceCount = -1;
 
@@ -31,10 +31,10 @@ public final class Wooting {
         int result = wooting_analog_initialise();
         if(result == 0) {
             wooting_analog_uninitialise();
-            System.out.println("Failed to find a Wooting device");
+            LOGGER.info("Failed to find a Wooting device");
             return;
         } else if(result <= 0) {
-            System.out.println("Failed to initialise Wooting SDK: " + errorName(result));
+            LOGGER.info("Failed to initialise Wooting SDK: " + errorName(result));
             return;
         }
         deviceCount = result;
@@ -51,15 +51,15 @@ public final class Wooting {
                 throw new RuntimeException("Wooting SDK failed to retrieve device info: " + errorName(result));
             }
 
-            System.out.println("Found " + deviceCount + " Wooting compatible keyboard" + (deviceCount == 1 ? "" : "s") + ":");
+            LOGGER.info("Found " + deviceCount + " Wooting compatible keyboard" + (deviceCount == 1 ? "" : "s"));
             for(int i = 0; i < deviceCount; i++) {
                 var info = new DeviceInfoFFI(pointers.getAtIndex(ValueLayout.ADDRESS, i));
-                System.out.printf("%s: %s (%02X:%02X)",
+                LOGGER.debug("%s: %s (%02X:%02X)".formatted(
                     info.manufacturer_name(),
                     info.device_name(),
                     info.vendor_id(),
                     info.product_id()
-                );
+                ));
             }
         }
     }

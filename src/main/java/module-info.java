@@ -18,4 +18,5 @@ module net.gudenau.cavegame {
     requires net.jodah.typetools;
 
     requires net.gudenau.cavegame.wooting;
+    requires net.gudenau.cavegame.logger;
 }

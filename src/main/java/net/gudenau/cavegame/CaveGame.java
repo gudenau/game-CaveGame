@@ -6,6 +6,8 @@ import net.gudenau.cavegame.ai.JobTypes;
 import net.gudenau.cavegame.ai.MiningJob;
 import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.level.Level;
+import net.gudenau.cavegame.logger.LogLevel;
+import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.material.Materials;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.ResourceLoader;
@@ -26,6 +28,8 @@ import java.util.stream.Stream;
 
 public final class CaveGame {
     public static final String NAMESPACE = "cave_game";
+
+    private static final Logger LOGGER = Logger.forClass(CaveGame.class);
 
     // I'm ignoring the warnings in this method because it's going to be remade at some point.
     public static void main(String[] args) {
