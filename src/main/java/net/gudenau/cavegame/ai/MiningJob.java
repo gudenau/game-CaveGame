@@ -3,7 +3,7 @@ package net.gudenau.cavegame.ai;
 import net.gudenau.cavegame.actor.LivingActor;
 import net.gudenau.cavegame.level.Pathfinder;
 import net.gudenau.cavegame.tile.Tile;
-import net.gudenau.cavegame.util.TilePos;
+import net.gudenau.cavegame.level.TilePos;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;

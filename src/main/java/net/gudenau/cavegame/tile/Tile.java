@@ -1,9 +1,9 @@
 package net.gudenau.cavegame.tile;
 
 import net.gudenau.cavegame.material.Material;
-import net.gudenau.cavegame.util.Identifier;
+import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.util.Lazy;
-import net.gudenau.cavegame.util.Registries;
+import net.gudenau.cavegame.Registries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;

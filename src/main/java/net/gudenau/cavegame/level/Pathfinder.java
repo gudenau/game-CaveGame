@@ -7,7 +7,6 @@ import net.gudenau.cavegame.actor.LivingActor;
 import net.gudenau.cavegame.tile.Tile;
 import net.gudenau.cavegame.util.MathUtils;
 import net.gudenau.cavegame.util.SharedLock;
-import net.gudenau.cavegame.util.TilePos;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;

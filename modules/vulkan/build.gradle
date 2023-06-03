@@ -1,0 +1,18 @@
+apply from: rootProject.projectDir.toPath().resolve(java.nio.file.Path.of('scripts', 'lwjgl.gradle')).toAbsolutePath().toString()
+
+dependencies {
+    implementation "it.unimi.dsi:fastutil:${project.fastutilVersion}"
+
+    implementation 'org.lwjgl:lwjgl'
+    runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-glfw'
+    runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-vulkan'
+
+    implementation 'org.lwjgl:lwjgl-shaderc'
+    runtimeOnly "org.lwjgl:lwjgl-shaderc::$lwjglNatives"
+
+    implementation project(':renderer')
+}

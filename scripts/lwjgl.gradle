@@ -25,20 +25,41 @@ repositories {
 
 dependencies {
     implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+}
+
+/*
+dependencies {
+    implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
 
     implementation 'org.lwjgl:lwjgl'
-    implementation 'org.lwjgl:lwjgl-assimp'
-    implementation 'org.lwjgl:lwjgl-glfw'
-    implementation 'org.lwjgl:lwjgl-openal'
-    implementation 'org.lwjgl:lwjgl-opengl'
-    implementation 'org.lwjgl:lwjgl-opus'
-    implementation 'org.lwjgl:lwjgl-stb'
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-jemalloc'
+    runtimeOnly "org.lwjgl:lwjgl-jemalloc::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-shaderc'
+    runtimeOnly "org.lwjgl:lwjgl-shaderc::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-assimp'
     runtimeOnly "org.lwjgl:lwjgl-assimp::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-glfw'
     runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-openal'
     runtimeOnly "org.lwjgl:lwjgl-openal::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-opengl'
     runtimeOnly "org.lwjgl:lwjgl-opengl::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-opus'
     runtimeOnly "org.lwjgl:lwjgl-opus::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-stb'
     runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-vulkan'
+
     implementation "org.joml:joml:${jomlVersion}"
 }
+ */

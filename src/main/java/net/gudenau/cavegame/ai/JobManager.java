@@ -2,7 +2,6 @@ package net.gudenau.cavegame.ai;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.gudenau.cavegame.actor.LivingActor;
-import net.gudenau.cavegame.util.Registries;
 import net.gudenau.cavegame.util.SharedLock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -6,15 +6,19 @@ import net.gudenau.cavegame.ai.JobTypes;
 import net.gudenau.cavegame.ai.MiningJob;
 import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.level.Level;
-import net.gudenau.cavegame.logger.LogLevel;
+import net.gudenau.cavegame.level.TilePos;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.material.Materials;
+import net.gudenau.cavegame.renderer.GlfwUtils;
+import net.gudenau.cavegame.renderer.RendererInfo;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
+import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.tile.Tile;
 import net.gudenau.cavegame.tile.Tiles;
 import net.gudenau.cavegame.tile.WallTile;
 import net.gudenau.cavegame.util.*;
+import org.lwjgl.system.Configuration;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -27,23 +31,79 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class CaveGame {
-    public static final String NAMESPACE = "cave_game";
+    public static final String NAMESPACE = Identifier.CAVEGAME_NAMESPACE;
 
-    private static final Logger LOGGER = Logger.forClass(CaveGame.class);
+    private static final Logger LOGGER = Logger.forName("CaveGame");
 
     // I'm ignoring the warnings in this method because it's going to be remade at some point.
     public static void main(String[] args) {
+        Configuration.DEBUG.set(true);
+        Configuration.DEBUG_MEMORY_ALLOCATOR.set(true);
+        Configuration.DEBUG_STACK.set(true);
+
+        GlfwUtils.handoverMain(CaveGame::newMain);
+    }
+
+    private static void newMain() {
+        ResourceLoader.registerProvider(NAMESPACE, ClassPathResourceProvider.of(CaveGame.class));
+
+        LOGGER.info("Available renderers: ");
+        var renderers = RendererInfo.availableRenderers();
+        renderers.forEach((info) ->
+            LOGGER.info(
+                """
+                    %s:
+                        Supported: %s
+                """.formatted(
+                    info.name(),
+                    info.supported() ? "true" : "false"
+                )
+            )
+        );
+        var rendererInfo = RendererInfo.of(renderers);
+        LOGGER.info("Using " + rendererInfo.name());
+
+        try(
+            var window = rendererInfo.createWindow("CaveGame", 640, 480);
+            var renderer = rendererInfo.createRenderer(window);
+        ) {
+            window.bind();
+            window.visible(true);
+
+            do {
+                renderer.draw();
+
+                window.flip();
+                GlfwUtils.poll();
+            } while(!window.closeRequested());
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+        if(true || false) {
+            return;
+        }
+
+
+
         Treachery.ensureInitialized(Registries.class, Tiles.class, Materials.class, JobTypes.class);
 
         Wooting.initialize();
 
-        var loader = new ResourceLoader();
-        loader.registerProvider(NAMESPACE, ClassPathResourceProvider.of(CaveGame.class));
-
         var futures = Registries.TILE.entries()
             .map((entry) -> ThreadPool.future(() -> {
                 var key = entry.getKey();
-                try(var stream = loader.stream(key.prefixPath("texture/tile").append(".png"))) {
+                try(var stream = ResourceLoader.stream(key.prefixPath("texture/tile").append(".png"))) {
                     return Map.entry(key, ImageIO.read(stream));
                 } catch (IOException e) {
                     throw new RuntimeException("Failed to open texture for tile " + key, e);

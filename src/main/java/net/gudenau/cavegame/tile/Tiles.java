@@ -3,8 +3,8 @@ package net.gudenau.cavegame.tile;
 import net.gudenau.cavegame.CaveGame;
 import net.gudenau.cavegame.api.HardnessLevel;
 import net.gudenau.cavegame.tile.state.StoreRoomState;
-import net.gudenau.cavegame.util.Identifier;
-import net.gudenau.cavegame.util.Registries;
+import net.gudenau.cavegame.resource.Identifier;
+import net.gudenau.cavegame.Registries;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 

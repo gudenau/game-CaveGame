@@ -1,13 +1,17 @@
 module net.gudenau.cavegame {
+    exports net.gudenau.cavegame.actor;
+    exports net.gudenau.cavegame.ai;
+    exports net.gudenau.cavegame.api;
+    exports net.gudenau.cavegame.input;
+    exports net.gudenau.cavegame.material;
+    exports net.gudenau.cavegame.tile;
+    exports net.gudenau.cavegame.level;
+
     //FIXME Remove
     requires java.desktop;
+    requires jdk.unsupported;
     
     requires org.jetbrains.annotations;
-    
-    requires org.lwjgl;
-    requires org.lwjgl.glfw;
-    requires org.lwjgl.opengl;
-    requires org.lwjgl.stb;
     
     requires org.joml;
     
@@ -17,6 +21,10 @@ module net.gudenau.cavegame {
 
     requires net.jodah.typetools;
 
+    requires org.lwjgl;
+
+    requires transitive net.gudenau.cavegame.logger;
+    requires transitive net.gudenau.cavegame.utilities;
     requires net.gudenau.cavegame.wooting;
-    requires net.gudenau.cavegame.logger;
+    requires net.gudenau.cavegame.renderer;
 }

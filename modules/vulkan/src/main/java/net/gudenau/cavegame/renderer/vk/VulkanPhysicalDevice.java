@@ -1,0 +1,255 @@
+package net.gudenau.cavegame.renderer.vk;
+
+import net.gudenau.cavegame.util.MathUtils;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.vulkan.*;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+
+import static org.lwjgl.vulkan.KHRSurface.*;
+import static org.lwjgl.vulkan.VK10.*;
+
+public final class VulkanPhysicalDevice implements AutoCloseable {
+    @NotNull
+    private final VkPhysicalDevice device;
+    private final int rank;
+
+    private int graphicsQueue = -1;
+    private int presentQueue = -1;
+    @NotNull
+    private final VkSurfaceCapabilitiesKHR surfaceCapabilities = VkSurfaceCapabilitiesKHR.calloc();
+    @Nullable
+    private VkSurfaceFormatKHR surfaceFormat = null;
+    private int surfacePresentMode = -1;
+    @NotNull
+    private final VkExtent2D extent = VkExtent2D.calloc();
+
+    private VulkanPhysicalDevice(@NotNull VkPhysicalDevice device, @NotNull VulkanSurface surface, @NotNull VkWindow window) {
+        this.device = device;
+        findQueues(surface);
+        querySwapChainSupport(surface);
+        chooseSwpExtent(window);
+        this.rank = calculateRank();
+    }
+
+    private void findQueues(@NotNull VulkanSurface surface) {
+        try(var stack = MemoryStack.stackPush()) {
+            var countPointer = stack.ints(0);
+            vkGetPhysicalDeviceQueueFamilyProperties(device, countPointer, null);
+
+            var count = countPointer.get(0);
+            var queues = VkQueueFamilyProperties.calloc(count, stack);
+            vkGetPhysicalDeviceQueueFamilyProperties(device, countPointer, queues);
+
+            var presentSupport = stack.ints(VK_FALSE);
+            for(int i = 0; i < count; i++) {
+                var queue = queues.get(i);
+                var queueFlags = queue.queueFlags();
+                if(graphicsQueue == -1 && (queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+                    graphicsQueue = i;
+                }
+
+                if(presentQueue == -1) {
+                    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface.handle(), presentSupport);
+                    if (presentSupport.get() == VK_TRUE) {
+                        presentQueue = i;
+                    }
+                }
+            }
+        }
+    }
+
+    private void querySwapChainSupport(@NotNull VulkanSurface surface) {
+        try (var stack = MemoryStack.stackPush()) {
+            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface.handle(), surfaceCapabilities);
+
+            var formatCountPointer = stack.ints(0);
+            vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface.handle(), formatCountPointer, null);
+
+            var formatCount = formatCountPointer.get(0);
+            if (formatCount != 0) {
+                var surfaceFormats = VkSurfaceFormatKHR.calloc(formatCount, stack);
+                vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface.handle(), formatCountPointer, surfaceFormats);
+
+                VkSurfaceFormatKHR bestFormat = null;
+                for (var format : surfaceFormats) {
+                    if (format.format() == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace() == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                        bestFormat = format;
+                        break;
+                    }
+                }
+                if (bestFormat == null) {
+                    bestFormat = surfaceFormats.get(0);
+                }
+                //TODO Find a better way
+                surfaceFormat = VkSurfaceFormatKHR.calloc();
+                MemoryUtil.memCopy(bestFormat, surfaceFormat);
+            }
+
+            var presentModeCountPointer = stack.ints(0);
+            vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface.handle(), presentModeCountPointer, null);
+
+            var presentModeCount = presentModeCountPointer.get(0);
+            if (presentModeCount != 0) {
+                var presentModes = stack.callocInt(presentModeCount);
+                vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface.handle(), presentModeCountPointer, presentModes);
+                var surfacePresentModes = VulkanUtils.extractList(presentModes);
+
+                surfacePresentMode = VK_PRESENT_MODE_FIFO_KHR;
+                for (int presentMode : surfacePresentModes) {
+                    if(presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+                        surfacePresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void chooseSwpExtent(@NotNull VkWindow window) {
+        if(surfaceCapabilities.currentExtent().width() != 0xFFFFFFFF) {
+            extent.set(surfaceCapabilities.currentExtent());
+        } else {
+            var size = window.framebufferSize();
+            var min = surfaceCapabilities.minImageExtent();
+            var max = surfaceCapabilities.maxImageExtent();
+
+            extent.set(
+                MathUtils.clamp(size.width(), min.width(), max.width()),
+                MathUtils.clamp(size.height(), min.height(), max.height())
+            );
+        }
+    }
+
+    @NotNull
+    public VkPhysicalDevice device() {
+        return device;
+    }
+
+    private int rank() {
+        return rank;
+    }
+
+    private int calculateRank() {
+        if(graphicsQueue == -1 || presentQueue == -1) {
+            return -1;
+        }
+
+        try(var stack = MemoryStack.stackPush()) {
+            var deviceProperties = VkPhysicalDeviceProperties.calloc(stack);
+            var deviceFeatures = VkPhysicalDeviceFeatures.calloc(stack);
+            vkGetPhysicalDeviceProperties(device, deviceProperties);
+            vkGetPhysicalDeviceFeatures(device, deviceFeatures);
+
+            if(!deviceFeatures.geometryShader()) {
+                return -1;
+            }
+
+            if(!validateExtensions()) {
+                return -1;
+            }
+
+            if(surfaceFormat == null || surfacePresentMode == -1) {
+                return -1;
+            }
+
+            return switch (deviceProperties.deviceType()) {
+                case VK_PHYSICAL_DEVICE_TYPE_OTHER -> 100000000;
+                case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU -> 400000000;
+                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU -> 500000000;
+                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU -> 300000000;
+                case VK_PHYSICAL_DEVICE_TYPE_CPU -> 200000000;
+                default -> 0;
+            };
+        }
+    }
+
+    private boolean validateExtensions() {
+        try(var stack = MemoryStack.stackPush()) {
+            var countPointer = stack.ints(0);
+            vkEnumerateDeviceExtensionProperties(device, (ByteBuffer) null, countPointer, null);
+
+            var count = countPointer.get(0);
+            var extensions = VkExtensionProperties.calloc(count, stack);
+            vkEnumerateDeviceExtensionProperties(device, (ByteBuffer) null, countPointer, extensions);
+
+            var missingExtensions = new HashSet<>(VulkanUtils.DEVICE_EXTENSIONS);
+            for (var extension : extensions) {
+                missingExtensions.remove(extension.extensionNameString());
+            }
+
+            return missingExtensions.isEmpty();
+        }
+    }
+
+    @NotNull
+    public static VulkanPhysicalDevice pick(@NotNull VulkanInstance instance, @NotNull VulkanSurface surface, @NotNull VkWindow window) {
+        try(var stack = MemoryStack.stackPush()) {
+            var deviceCountPointer = stack.ints(0);
+            vkEnumeratePhysicalDevices(instance.handle(), deviceCountPointer, null);
+
+            var deviceCount = deviceCountPointer.get(0);
+            var devicesPointer = stack.mallocPointer(deviceCount);
+            vkEnumeratePhysicalDevices(instance.handle(), deviceCountPointer, devicesPointer);
+            var devices = new ArrayList<VkPhysicalDevice>(deviceCount);
+            for(int i = 0; i < deviceCount; i++) {
+                devices.add(new VkPhysicalDevice(devicesPointer.get(i), instance.handle()));
+            }
+
+            return devices.stream()
+                .map((device) -> new VulkanPhysicalDevice(device, surface, window))
+                .filter((device) -> {
+                    if(device.rank() == -1) {
+                        device.close();
+                        return false;
+                    }
+                    return true;
+                })
+                .max(Comparator.comparingInt(VulkanPhysicalDevice::rank))
+                .orElseThrow(() -> new RuntimeException("Failed to find suitable Vulkan device"));
+        }
+    }
+
+    public int graphicsQueue() {
+        return graphicsQueue;
+    }
+
+    public int presentQueue() {
+        return presentQueue;
+    }
+
+    @NotNull
+    public VkSurfaceCapabilitiesKHR surfaceCapabilities() {
+        return surfaceCapabilities;
+    }
+
+    @NotNull
+    public VkSurfaceFormatKHR surfaceFormat() {
+        assert(surfaceFormat != null);
+        return surfaceFormat;
+    }
+
+    public int surfacePresentMode() {
+        return surfacePresentMode;
+    }
+
+    @NotNull
+    public VkExtent2D surfaceExtent() {
+        return extent;
+    }
+
+    @Override
+    public void close() {
+        surfaceCapabilities.free();
+        if(surfaceFormat != null) {
+            surfaceFormat.free();
+        }
+        extent.free();
+    }
+}

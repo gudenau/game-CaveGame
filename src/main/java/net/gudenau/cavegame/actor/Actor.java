@@ -2,7 +2,7 @@ package net.gudenau.cavegame.actor;
 
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.tile.Tile;
-import net.gudenau.cavegame.util.TilePos;
+import net.gudenau.cavegame.level.TilePos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -83,8 +83,8 @@ public abstract class Actor {
      * <br>
      * Equivalent to:
      * {@snippet :
-     *     new TilePos(actor.x(), actor.y())
-     * }
+     *     import net.gudenau.cavegame.level.TilePos;new TilePos(actor.x(), actor.y())
+     *}
      *
      * @return The {@link TilePos} of this actor
      */

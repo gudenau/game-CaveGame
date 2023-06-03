@@ -10,7 +10,7 @@ import static net.gudenau.cavegame.wooting.WootingAnalog.*;
 import static net.gudenau.cavegame.wooting.WootingCommon.*;
 
 public final class Wooting {
-    private static final Logger LOGGER = Logger.forClass(Wooting.class);
+    private static final Logger LOGGER = Logger.forName("Wooting");
 
     private static volatile boolean initialized = false;
     private static int deviceCount = -1;

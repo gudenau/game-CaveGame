@@ -3,11 +3,9 @@ package net.gudenau.cavegame.actor;
 import net.gudenau.cavegame.ai.Job;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.level.Pathfinder;
-import net.gudenau.cavegame.tile.Tile;
-import net.gudenau.cavegame.util.TilePos;
+import net.gudenau.cavegame.level.TilePos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector2d;
 
 import java.util.LinkedList;
 import java.util.List;

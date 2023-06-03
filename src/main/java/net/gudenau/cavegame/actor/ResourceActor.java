@@ -3,7 +3,7 @@ package net.gudenau.cavegame.actor;
 import net.gudenau.cavegame.ai.ResourceJob;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.material.Material;
-import net.gudenau.cavegame.util.TilePos;
+import net.gudenau.cavegame.level.TilePos;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;

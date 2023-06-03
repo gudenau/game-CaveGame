@@ -1,0 +1,7 @@
+dependencies {
+    implementation "it.unimi.dsi:fastutil:${project.fastutilVersion}"
+    implementation "net.jodah:typetools:${project.typetoolsVersion}"
+
+    implementation 'org.lwjgl:lwjgl'
+    runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+}

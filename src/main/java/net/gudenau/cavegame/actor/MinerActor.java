@@ -1,16 +1,7 @@
 package net.gudenau.cavegame.actor;
 
 import net.gudenau.cavegame.level.Level;
-import net.gudenau.cavegame.material.Material;
-import net.gudenau.cavegame.tile.Tile;
-import net.gudenau.cavegame.tile.Tiles;
-import net.gudenau.cavegame.tile.WallTile;
-import net.gudenau.cavegame.tile.state.StoreRoomState;
-import net.gudenau.cavegame.util.TilePos;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.Comparator;
 
 /**
  * The primary player controlled actor.

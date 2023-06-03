@@ -2,7 +2,6 @@ package net.gudenau.cavegame.ai;
 
 import it.unimi.dsi.fastutil.Function;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import net.gudenau.cavegame.util.Identifier;
 import net.gudenau.cavegame.util.SharedLock;
 import net.gudenau.cavegame.util.Treachery;
 import net.jodah.typetools.TypeResolver;
