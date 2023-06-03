@@ -1,6 +1,7 @@
 module net.gudenau.cavegame.utilities {
-    exports net.gudenau.cavegame.util;
+    exports net.gudenau.cavegame.config;
     exports net.gudenau.cavegame.resource;
+    exports net.gudenau.cavegame.util;
 
     requires jdk.unsupported;
 

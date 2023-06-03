@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.resource;
 
+import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.util.SharedLock;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryUtil;
@@ -142,7 +143,7 @@ public final class ResourceLoader {
     public static ByteBuffer buffer(Identifier identifier) throws IOException {
         try(var channel = channel(identifier)) {
             var length = channel.size();
-            if(length > Integer.MAX_VALUE) { // TODO Make this into a configurable limit with a sensible default
+            if(length > Config.MAX_BUFFER_SIZE.get()) {
                 throw new IOException("Failed to read " + identifier + " into native buffer: File is too large");
             }
 

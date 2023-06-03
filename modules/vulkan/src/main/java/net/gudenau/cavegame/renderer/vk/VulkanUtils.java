@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
+import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +13,6 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
@@ -30,8 +30,7 @@ public final class VulkanUtils {
     // Thanks Apple
     public static final boolean IS_OSX = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac");
 
-    //TODO Make this a config option
-    public static final boolean ENABLE_DEBUG = true;
+    public static final boolean ENABLE_DEBUG = Config.DEBUG.get();
     public static final Set<String> INSTANCE_VALIDATION_LAYERS = Set.of(
         "VK_LAYER_KHRONOS_validation"
     );
@@ -163,22 +162,9 @@ public final class VulkanUtils {
 
     @NotNull
     public static ByteBuffer readIntoNativeBuffer(@NotNull Identifier identifier) {
-        ByteBuffer buffer = null;
-        try(var channel = ResourceLoader.channel(identifier)) {
-            var size = channel.size();
-            if(size > Integer.MAX_VALUE) { //TODO Make this configurable with a reasonable default limit
-                throw new IllegalArgumentException("File was too large");
-            }
-
-            buffer = MemoryUtil.memAlloc((int) size);
-            while(buffer.hasRemaining()) {
-                if(channel.read(buffer) <= 0) {
-                    throw new IOException("Unexpected end of stream");
-                }
-            }
-            return buffer.flip();
+        try {
+            return ResourceLoader.buffer(identifier);
         } catch (Throwable e) {
-            MemoryUtil.memFree(buffer);
             throw new RuntimeException("Failed to read resource " + identifier + " into a native buffer", e);
         }
     }

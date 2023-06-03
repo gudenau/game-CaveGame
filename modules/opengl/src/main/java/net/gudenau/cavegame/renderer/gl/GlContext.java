@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer.gl;
 
+import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.GlfwUtils;
@@ -19,6 +20,8 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public sealed class GlContext implements AutoCloseable permits GlExecutor.Context, GlRenderer.PrimordialContext, GlWindow {
     private static final Logger LOGGER = Logger.forName("OpenGL");
+
+    // There is a LWJGL race condition involving this, if LWJGL says this isn't freed it is lying.
     private static final GLDebugMessageCallback DEBUG_CALLBACK = GLDebugMessageCallback.create((source, type, id, severity, length, message, userParam) -> {
         var level = switch (severity) {
             case GL_DEBUG_SEVERITY_HIGH -> LogLevel.ERROR;
@@ -58,7 +61,7 @@ public sealed class GlContext implements AutoCloseable permits GlExecutor.Contex
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
-            glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+            glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, Config.DEBUG.get() ? GLFW_TRUE : GLFW_FALSE);
 
             //TODO Remove GL string
             return glfwCreateWindow(width, height, title + " (GL)", NULL, parent == null ? NULL : parent.context);
@@ -75,8 +78,10 @@ public sealed class GlContext implements AutoCloseable permits GlExecutor.Contex
         try {
             capabilities = GL.createCapabilities();
 
-            glEnable(GL_DEBUG_OUTPUT);
-            glDebugMessageCallback(DEBUG_CALLBACK, NULL);
+            if(Config.DEBUG.get()) {
+                glEnable(GL_DEBUG_OUTPUT);
+                glDebugMessageCallback(DEBUG_CALLBACK, NULL);
+            }
         } finally {
             glfwMakeContextCurrent(oldContext);
             GL.setCapabilities(oldCaps);

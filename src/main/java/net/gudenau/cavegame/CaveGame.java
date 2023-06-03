@@ -4,6 +4,7 @@ import net.gudenau.cavegame.actor.MinerActor;
 import net.gudenau.cavegame.actor.ResourceActor;
 import net.gudenau.cavegame.ai.JobTypes;
 import net.gudenau.cavegame.ai.MiningJob;
+import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.level.TilePos;
@@ -37,9 +38,13 @@ public final class CaveGame {
 
     // I'm ignoring the warnings in this method because it's going to be remade at some point.
     public static void main(String[] args) {
-        Configuration.DEBUG.set(true);
-        Configuration.DEBUG_MEMORY_ALLOCATOR.set(true);
-        Configuration.DEBUG_STACK.set(true);
+        Config.parseArguments(args);
+
+        if(Config.DEBUG.get()) {
+            Configuration.DEBUG.set(true);
+            Configuration.DEBUG_MEMORY_ALLOCATOR.set(true);
+            Configuration.DEBUG_STACK.set(true);
+        }
 
         GlfwUtils.handoverMain(CaveGame::newMain);
     }
