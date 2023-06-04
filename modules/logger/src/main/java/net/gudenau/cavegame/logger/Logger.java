@@ -121,4 +121,10 @@ public final class Logger {
 
         return forName(module.getName());
     }
+
+    public static void level(@NotNull LogLevel level) {
+        Objects.requireNonNull(level, "level can't be null");
+
+        LEVEL = level;
+    }
 }

@@ -8,6 +8,7 @@ import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.level.Level;
 import net.gudenau.cavegame.level.TilePos;
+import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.material.Materials;
 import net.gudenau.cavegame.renderer.GlfwUtils;
@@ -45,6 +46,7 @@ public final class CaveGame {
             Configuration.DEBUG_MEMORY_ALLOCATOR.set(true);
             Configuration.DEBUG_STACK.set(true);
         }
+        Logger.level(LogLevel.of(Config.LOG_LEVEL.get()));
 
         GlfwUtils.handoverMain(CaveGame::newMain);
     }

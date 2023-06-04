@@ -10,6 +10,7 @@ public final class Config<T> {
 
     public static final Config<Boolean> DEBUG = bool("debug", false);
     public static final Config<Integer> MAX_BUFFER_SIZE = integer("max_buffer_size", 0x10000000);
+    public static final Config<String> LOG_LEVEL = string("log_level", "debug"); // TODO Enums?
 
     static {
         CONFIGURATION.forEach((config) -> {
@@ -55,6 +56,10 @@ public final class Config<T> {
 
     private static Config<Integer> integer(String name, int value) {
         return new Config<>(name, value, Integer::valueOf);
+    }
+
+    private static Config<String> string(String name, String value) {
+        return new Config<>(name, value, Function.identity());
     }
 
     @NotNull
