@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A bunch of hacks, beware the dragons.
+ * A bunch of hacks, beware the dragons. (This is undocumented on purpose)
  */
 public final class Treachery {
     private Treachery() {

@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
@@ -139,6 +140,14 @@ public final class ResourceLoader {
         }
     }
 
+    /**
+     * Reads the entire contents of the file pointed to by the identifier into a native buffer. Ensure that the buffer
+     * is freed via {@link MemoryUtil#memFree(Buffer)} otherwise you will leak memory!
+     *
+     * @param identifier The identifier to read
+     * @return The created buffer
+     * @throws IOException if there was an error opening or reading the file
+     */
     @NotNull
     public static ByteBuffer buffer(Identifier identifier) throws IOException {
         try(var channel = channel(identifier)) {

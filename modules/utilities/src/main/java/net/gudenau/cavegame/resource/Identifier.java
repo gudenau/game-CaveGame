@@ -23,13 +23,19 @@ public record Identifier(
     /**
      * The namespace predicate used to validate identifiers.
      */
+    @NotNull
     private static final Predicate<String> NAMESPACE_PREDICATE = Pattern.compile("^[a-z][a-z0-9_]*$").asMatchPredicate();
 
     /**
      * The path predicate used to validate identifiers.
      */
+    @NotNull
     private static final Predicate<String> PATH_PREDICATE = Pattern.compile("^[a-z][a-z0-9_/\\\\.]*$").asMatchPredicate();
 
+    /**
+     * The "default" namespace of "cave_game".
+     */
+    @NotNull
     public static final String CAVEGAME_NAMESPACE = "cave_game";
 
     public Identifier {
@@ -102,6 +108,12 @@ public record Identifier(
         }
     }
 
+    /**
+     * Gets the filename from the path of this identifier. The filename is the contents of the path after the final '/'
+     * or the entire path if there is no `/`.
+     *
+     * @return The filename of this identifier
+     */
     @NotNull
     public String filename() {
         int index = path.lastIndexOf('/');
@@ -112,6 +124,12 @@ public record Identifier(
         }
     }
 
+    /**
+     * Gets the directories of the path of this identifier, if they are present. The directories of this path are
+     * everything that is before the last '/', if present.
+     *
+     * @return The directories of this namespace or null if absent
+     */
     @Nullable
     public String directory() {
         int index = path.lastIndexOf('/');
@@ -122,6 +140,13 @@ public record Identifier(
         }
     }
 
+    /**
+     * Gets the extension from the filename of the path in this identifier. The file extension is the contents of the
+     * {@link #filename() filename} past the last '.', if present. If there is no extension (I.E. "cave_game:file") this
+     * will return 'null', if the extension is empty (I.E. "cave_game:file.") this method will return an empty string.
+     *
+     * @return The extension if present, null if absent
+     */
     @Nullable
     public String extension() {
         var fileName = filename();
@@ -133,6 +158,14 @@ public record Identifier(
         }
     }
 
+    /**
+     * Sets the extension of this identifier and returns a new instance. If the current identifier already has an
+     * extension this method will fail.
+     *
+     * @param extension The extension to use
+     * @return The new identifier
+     * @throws IllegalStateException if the identifier already had an extension
+     */
     @NotNull
     public Identifier extension(@NotNull String extension) {
         Objects.requireNonNull(extension, "extension can't be null");

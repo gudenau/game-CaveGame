@@ -26,6 +26,14 @@ public final class MathUtils {
         return r;
     }
 
+    /**
+     * Clamps the provided value to be within the min and max values, inclusive.
+     *
+     * @param value The value to clamp
+     * @param min The minimum, inclusive
+     * @param max The maximum, inclusive
+     * @return The clamped value
+     */
     public static int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
     }
