@@ -10,17 +10,36 @@ import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public abstract class GlfwWindow implements Window {
-    private final long handle;
 
     private boolean visible = false;
+    @Nullable
+    private ResizeCallback resizeCallback = null;
+
+    private final long handle;
 
     protected GlfwWindow(@NotNull String title, int width, int height, @Nullable Object user) {
         Objects.requireNonNull(title, "title can't be null");
 
-        handle = GlfwUtils.invokeAndWait(() -> createWindow(title, width, height, user));
+        handle = GlfwUtils.invokeAndWait(() -> {
+            var result = createWindow(title, width, height, user);
+            if(result != NULL) {
+                // Idea is wrong here, weird usage of AutoClosable
+                //noinspection resource
+                glfwSetFramebufferSizeCallback(result, this::resizeCallback);
+            }
+            return result;
+        });
 
         if(handle == NULL) {
             throw new RuntimeException("Failed to create GLFW window");
+        }
+    }
+
+    private void resizeCallback(long handle, int width, int height) {
+        synchronized (this) {
+            if (this.handle == handle && resizeCallback != null) {
+                resizeCallback.invoke(this, width, height);
+            }
         }
     }
 
@@ -70,6 +89,13 @@ public abstract class GlfwWindow implements Window {
         });
     }
 
+    @Override
+    public void resizeCallback(@Nullable ResizeCallback callback) {
+        synchronized (this) {
+            this.resizeCallback = callback;
+        }
+    }
+
     public final long handle() {
         return handle;
     }
@@ -88,6 +114,11 @@ public abstract class GlfwWindow implements Window {
 
     @Override
     public void close() {
-        GlfwUtils.invokeLater(() -> glfwDestroyWindow(handle));
+        GlfwUtils.invokeLater(() -> {
+            // Idea is wrong here, weird usage of AutoClosable and nullable stuff
+            //noinspection resource,DataFlowIssue
+            glfwSetFramebufferSizeCallback(handle, null).free();
+            glfwDestroyWindow(handle);
+        });
     }
 }

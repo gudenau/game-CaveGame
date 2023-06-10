@@ -18,27 +18,30 @@ import static org.lwjgl.vulkan.VK10.*;
 public final class VulkanPhysicalDevice implements AutoCloseable {
     @NotNull
     private final VkPhysicalDevice device;
+    @NotNull
+    private final VulkanSurface surface;
+    @NotNull
+    private final VkWindow window;
+
     private final int rank;
 
     private int graphicsQueue = -1;
     private int presentQueue = -1;
-    @NotNull
-    private final VkSurfaceCapabilitiesKHR surfaceCapabilities = VkSurfaceCapabilitiesKHR.calloc();
     @Nullable
     private VkSurfaceFormatKHR surfaceFormat = null;
     private int surfacePresentMode = -1;
-    @NotNull
-    private final VkExtent2D extent = VkExtent2D.calloc();
 
     private VulkanPhysicalDevice(@NotNull VkPhysicalDevice device, @NotNull VulkanSurface surface, @NotNull VkWindow window) {
         this.device = device;
-        findQueues(surface);
-        querySwapChainSupport(surface);
-        chooseSwpExtent(window);
+        this.surface = surface;
+        this.window = window;
+
+        findQueues();
+        querySwapChainSupport();
         this.rank = calculateRank();
     }
 
-    private void findQueues(@NotNull VulkanSurface surface) {
+    private void findQueues() {
         try(var stack = MemoryStack.stackPush()) {
             var countPointer = stack.ints(0);
             vkGetPhysicalDeviceQueueFamilyProperties(device, countPointer, null);
@@ -65,10 +68,8 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
         }
     }
 
-    private void querySwapChainSupport(@NotNull VulkanSurface surface) {
+    private void querySwapChainSupport() {
         try (var stack = MemoryStack.stackPush()) {
-            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface.handle(), surfaceCapabilities);
-
             var formatCountPointer = stack.ints(0);
             vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface.handle(), formatCountPointer, null);
 
@@ -112,18 +113,21 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
         }
     }
 
-    private void chooseSwpExtent(@NotNull VkWindow window) {
-        if(surfaceCapabilities.currentExtent().width() != 0xFFFFFFFF) {
-            extent.set(surfaceCapabilities.currentExtent());
-        } else {
-            var size = window.framebufferSize();
-            var min = surfaceCapabilities.minImageExtent();
-            var max = surfaceCapabilities.maxImageExtent();
+    private void chooseSwpExtent(@NotNull VkExtent2D extent) {
+        try(var stack = MemoryStack.stackPush()) {
+            var capabilities = surfaceCapabilities(stack);
+            if (capabilities.currentExtent().width() != 0xFFFFFFFF) {
+                extent.set(capabilities.currentExtent());
+            } else {
+                var size = window.framebufferSize();
+                var min = capabilities.minImageExtent();
+                var max = capabilities.maxImageExtent();
 
-            extent.set(
-                MathUtils.clamp(size.width(), min.width(), max.width()),
-                MathUtils.clamp(size.height(), min.height(), max.height())
-            );
+                extent.set(
+                    MathUtils.clamp(size.width(), min.width(), max.width()),
+                    MathUtils.clamp(size.height(), min.height(), max.height())
+                );
+            }
         }
     }
 
@@ -225,8 +229,10 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
     }
 
     @NotNull
-    public VkSurfaceCapabilitiesKHR surfaceCapabilities() {
-        return surfaceCapabilities;
+    public VkSurfaceCapabilitiesKHR surfaceCapabilities(@NotNull MemoryStack stack) {
+        var capabilities = VkSurfaceCapabilitiesKHR.calloc(stack);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface.handle(), capabilities);
+        return capabilities;
     }
 
     @NotNull
@@ -240,16 +246,16 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
     }
 
     @NotNull
-    public VkExtent2D surfaceExtent() {
+    public VkExtent2D surfaceExtent(@NotNull MemoryStack stack) {
+        var extent = VkExtent2D.calloc(stack);
+        chooseSwpExtent(extent);
         return extent;
     }
 
     @Override
     public void close() {
-        surfaceCapabilities.free();
         if(surfaceFormat != null) {
             surfaceFormat.free();
         }
-        extent.free();
     }
 }

@@ -3,6 +3,7 @@ package net.gudenau.cavegame.renderer.internal;
 import net.gudenau.cavegame.renderer.RendererInfo;
 import net.gudenau.cavegame.renderer.Window;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -76,5 +77,10 @@ public record MergedWindow(
             state.height = Math.max(state.height, size.height());
         });
         return new Size(state.width, state.height);
+    }
+
+    @Override
+    public void resizeCallback(@Nullable ResizeCallback callback) {
+        //TODO I have no idea how one would implement this correctly...
     }
 }

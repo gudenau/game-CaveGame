@@ -16,7 +16,7 @@ public final class VkWindow extends GlfwWindow {
         glfwDefaultWindowHints();
 
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 

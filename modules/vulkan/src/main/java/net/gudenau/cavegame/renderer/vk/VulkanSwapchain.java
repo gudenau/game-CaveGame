@@ -22,11 +22,12 @@ public final class VulkanSwapchain implements AutoCloseable {
     @NotNull
     private final VkExtent2D extent;
 
-    public VulkanSwapchain(@NotNull VulkanPhysicalDevice physicalDevice, @NotNull VulkanSurface surface, @NotNull VulkanLogicalDevice logicalDevice) {
+    public VulkanSwapchain(@NotNull VulkanPhysicalDevice physicalDevice, @NotNull VulkanSurface surface, @NotNull VulkanLogicalDevice logicalDevice, @NotNull VkExtent2D extent) {
         this.device = logicalDevice;
+        this.extent = VkExtent2D.calloc().set(extent);
 
         try(var stack = MemoryStack.stackPush()) {
-            var surfaceCapabilities = physicalDevice.surfaceCapabilities();
+            var surfaceCapabilities = physicalDevice.surfaceCapabilities(stack);
             var surfaceFormat = physicalDevice.surfaceFormat();
 
             int imageCount = Math.min(
@@ -40,7 +41,7 @@ public final class VulkanSwapchain implements AutoCloseable {
             createInfo.minImageCount(imageCount);
             createInfo.imageFormat(surfaceFormat.format());
             createInfo.imageColorSpace(surfaceFormat.colorSpace());
-            createInfo.imageExtent(physicalDevice.surfaceExtent());
+            createInfo.imageExtent(extent);
             createInfo.imageArrayLayers(1);
             createInfo.imageUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
@@ -78,7 +79,6 @@ public final class VulkanSwapchain implements AutoCloseable {
             this.swapChainImages = VulkanUtils.extractList(swapChainImages);
 
             imageFormat = surfaceFormat.format();
-            extent = VkExtent2D.calloc().set(physicalDevice.surfaceExtent());
         }
     }
 
@@ -90,16 +90,12 @@ public final class VulkanSwapchain implements AutoCloseable {
         try(var stack = MemoryStack.stackPush()) {
             var image = stack.ints(0);
             var result = vkAcquireNextImageKHR(device.handle(), handle, -1L, semaphore.handle(), VK_NULL_HANDLE, image);
-            if(result != VK_SUCCESS) {
-                throw new RuntimeException("Failed to acquire next swapchain image: " + VulkanUtils.errorString(result));
-            }
-            return image.get(0);
+            return switch (result) {
+                case VK_ERROR_OUT_OF_DATE_KHR -> -1;
+                case VK_SUCCESS, VK_SUBOPTIMAL_KHR -> image.get(0);
+                default -> throw new RuntimeException("Failed to acquire next swapchain image: " + VulkanUtils.errorString(result));
+            };
         }
-    }
-
-    @NotNull
-    public VkExtent2D extent() {
-        return extent;
     }
 
     public long handle() {
@@ -114,6 +110,11 @@ public final class VulkanSwapchain implements AutoCloseable {
     @Override
     public void close() {
         vkDestroySwapchainKHR(device.handle(), handle, VulkanAllocator.get());
-        extent.free();
+        extent.close();
+    }
+
+    @NotNull
+    public VkExtent2D extent() {
+        return extent;
     }
 }

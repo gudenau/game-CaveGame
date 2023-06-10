@@ -34,6 +34,8 @@ public final class Config<T> {
      */
     public static final Config<String> LOG_LEVEL = string("log_level", "debug"); // TODO Enums?
 
+    public static final Config<String> RENDERER = string("renderer", "CaveGameVk");
+
     static {
         // Check system props for any matching values
         CONFIGURATION.forEach((config) -> {

@@ -67,7 +67,11 @@ public final class CaveGame {
                 )
             )
         );
-        var rendererInfo = RendererInfo.of(renderers);
+        var rendererInfo = renderers.stream()
+            .filter(RendererInfo::supported)
+            .filter((info) -> info.name().equals(Config.RENDERER.get()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Failed to find supported renderer " + Config.RENDERER.get()));
         LOGGER.info("Using " + rendererInfo.name());
 
         try(

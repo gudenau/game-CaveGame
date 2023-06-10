@@ -11,10 +11,14 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static net.gudenau.cavegame.resource.Identifier.CAVEGAME_NAMESPACE;
-import static org.lwjgl.vulkan.KHRSwapchain.vkQueuePresentKHR;
+import static org.lwjgl.vulkan.KHRSwapchain.*;
 import static org.lwjgl.vulkan.VK10.*;
 
 public final class VkRenderer implements Renderer {
+    private static final int MAX_FRAMES_IN_FLIGHT = 2;
+    private int currentFrame = 0;
+    private boolean framebufferResized = false;
+
     @NotNull
     private final VulkanInstance instance;
     @Nullable
@@ -26,22 +30,18 @@ public final class VkRenderer implements Renderer {
     @NotNull
     private final VulkanLogicalDevice logicalDevice;
     @NotNull
-    private final VulkanSwapchain swapchain;
+    private VulkanSwapchain swapchain;
     @NotNull
-    private final List<@NotNull VulkanImageView> imageViews;
+    private List<@NotNull VulkanImageView> imageViews;
     @NotNull
     private final VulkanRenderPass renderPass;
     @NotNull
     private final VulkanGraphicsPipeline graphicsPipeline;
     @NotNull
-    private final List<@NotNull VulkanFramebuffer> swapchainFramebuffers;
+    private List<@NotNull VulkanFramebuffer> swapchainFramebuffers;
     @NotNull
     private final VulkanCommandPool commandPool;
-
-    private static final int MAX_FRAMES_IN_FLIGHT = 2;
     private final List<FrameState> frameState;
-
-    private int currentFrame = 0;
 
     private record FrameState(
         int index,
@@ -70,45 +70,72 @@ public final class VkRenderer implements Renderer {
     }
 
     public VkRenderer(@NotNull VkWindow window) {
-        instance = new VulkanInstance();
-        debugMessenger = VulkanUtils.ENABLE_DEBUG ? new VulkanDebugMessenger(instance) : null;
-        surface = new VulkanSurface(window, instance);
-        physicalDevice = VulkanPhysicalDevice.pick(instance, surface, window);
-        logicalDevice = new VulkanLogicalDevice(instance, physicalDevice);
-        swapchain = new VulkanSwapchain(physicalDevice, surface, logicalDevice);
-        imageViews = swapchain.stream()
-            .mapToObj((image) -> new VulkanImageView(logicalDevice, image, swapchain.imageFormat()))
-            .toList();
-        renderPass = new VulkanRenderPass(logicalDevice, swapchain);
+        try(var stack = MemoryStack.stackPush()) {
+            window.resizeCallback((wind, width, height) -> framebufferResized = true);
 
-        var shaderId = new Identifier(CAVEGAME_NAMESPACE, "basic");
-        try(
-            var vertexShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.VERTEX, shaderId);
-            var fragmentShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.FRAGMENT, shaderId);
-        ) {
-            graphicsPipeline = new VulkanGraphicsPipeline(logicalDevice, physicalDevice.surfaceExtent(), renderPass, vertexShader, fragmentShader);
+            instance = new VulkanInstance();
+            debugMessenger = VulkanUtils.ENABLE_DEBUG ? new VulkanDebugMessenger(instance) : null;
+            surface = new VulkanSurface(window, instance);
+            physicalDevice = VulkanPhysicalDevice.pick(instance, surface, window);
+            var extent = physicalDevice.surfaceExtent(stack);
+            logicalDevice = new VulkanLogicalDevice(instance, physicalDevice);
+            swapchain = new VulkanSwapchain(physicalDevice, surface, logicalDevice, extent);
+            imageViews = swapchain.stream()
+                .mapToObj((image) -> new VulkanImageView(logicalDevice, image, swapchain.imageFormat()))
+                .toList();
+            renderPass = new VulkanRenderPass(logicalDevice, swapchain);
+
+            var shaderId = new Identifier(CAVEGAME_NAMESPACE, "basic");
+            try (
+                var vertexShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.VERTEX, shaderId);
+                var fragmentShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.FRAGMENT, shaderId)
+            ) {
+                graphicsPipeline = new VulkanGraphicsPipeline(logicalDevice, extent, renderPass, vertexShader, fragmentShader);
+            }
+            swapchainFramebuffers = imageViews.stream()
+                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, extent))
+                .toList();
+            commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
+
+            frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
+                .mapToObj((index) -> new FrameState(index, logicalDevice, commandPool))
+                .toList();
         }
-        swapchainFramebuffers = imageViews.stream()
-            .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view))
-            .toList();
-        commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
+    }
 
-        frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
-            .mapToObj((index) -> new FrameState(index, logicalDevice, commandPool))
-            .toList();
+    private void destroySwapChain() {
+        swapchainFramebuffers.forEach(VulkanFramebuffer::close);
+        imageViews.forEach(VulkanImageView::close);
+        swapchain.close();
+    }
+
+    private void recreateSwapChain() {
+        try(var stack = MemoryStack.stackPush()) {
+            logicalDevice.waitForIdle();
+
+            destroySwapChain();
+
+            var extent = physicalDevice.surfaceExtent(stack);
+            swapchain = new VulkanSwapchain(physicalDevice, surface, logicalDevice, extent);
+            imageViews = swapchain.stream()
+                .mapToObj((image) -> new VulkanImageView(logicalDevice, image, swapchain.imageFormat()))
+                .toList();
+            swapchainFramebuffers = imageViews.stream()
+                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, extent))
+                .toList();
+        }
     }
 
     @Override
     public void close() {
         logicalDevice.waitForIdle();
 
+        destroySwapChain();
+
         frameState.forEach(FrameState::close);
         commandPool.close();
-        swapchainFramebuffers.forEach(VulkanFramebuffer::close);
         graphicsPipeline.close();
         renderPass.close();
-        imageViews.forEach(VulkanImageView::close);
-        swapchain.close();
         logicalDevice.close();
         physicalDevice.close();
         surface.close();
@@ -128,8 +155,13 @@ public final class VkRenderer implements Renderer {
         var renderFinishedSemaphore = frameState.renderFinishedSemaphore();
         var inFlightFence = frameState.inFlightFence();
 
-        inFlightFence.yield();
         int imageIndex = swapchain.acquireNextImage(imageAvailableSemaphore);
+        if(imageIndex == -1) {
+            recreateSwapChain();
+            imageIndex = swapchain.acquireNextImage(imageAvailableSemaphore);
+        }
+
+        inFlightFence.yield();
 
         commandBuffer.reset();
         commandBuffer.begin();
@@ -149,8 +181,14 @@ public final class VkRenderer implements Renderer {
             presentInfo.pSwapchains(stack.longs(swapchain.handle()));
             presentInfo.pImageIndices(stack.ints(imageIndex));
             var result = vkQueuePresentKHR(logicalDevice.presentQueue(), presentInfo);
-            if(result != VK_SUCCESS) {
-                throw new RuntimeException("Failed to present Vulkan queue: " + VulkanUtils.errorString(result));
+            switch (result) {
+                case VK_SUCCESS -> {}
+                case VK_ERROR_OUT_OF_DATE_KHR, VK_SUBOPTIMAL_KHR -> recreateSwapChain();
+                default -> throw new RuntimeException("Failed to present Vulkan queue: " + VulkanUtils.errorString(result));
+            }
+            if(framebufferResized) {
+                framebufferResized = false;
+                recreateSwapChain();
             }
         }
     }
