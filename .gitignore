@@ -3,3 +3,6 @@
 .idea/
 build/
 *.log
+run/
+.vscode/
+bin/
