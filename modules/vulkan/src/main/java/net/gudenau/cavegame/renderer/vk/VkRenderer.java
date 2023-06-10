@@ -8,6 +8,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static net.gudenau.cavegame.resource.Identifier.CAVEGAME_NAMESPACE;
 import static org.lwjgl.vulkan.KHRSwapchain.vkQueuePresentKHR;
@@ -36,14 +37,37 @@ public final class VkRenderer implements Renderer {
     private final List<@NotNull VulkanFramebuffer> swapchainFramebuffers;
     @NotNull
     private final VulkanCommandPool commandPool;
-    @NotNull
-    private final VulkanCommandBuffer commandBuffer;
-    @NotNull
-    private final VulkanSemaphore imageAvailableSemaphore;
-    @NotNull
-    private final VulkanSemaphore renderFinishedSemaphore;
-    @NotNull
-    private final VulkanFence inFlightFence;
+
+    private static final int MAX_FRAMES_IN_FLIGHT = 2;
+    private final List<FrameState> frameState;
+
+    private int currentFrame = 0;
+
+    private record FrameState(
+        int index,
+        @NotNull VulkanCommandBuffer commandBuffer,
+        @NotNull VulkanSemaphore imageAvailableSemaphore,
+        @NotNull VulkanSemaphore renderFinishedSemaphore,
+        @NotNull VulkanFence inFlightFence
+    ) implements AutoCloseable {
+        private FrameState(int index, @NotNull VulkanLogicalDevice device, @NotNull VulkanCommandPool commandPool) {
+            this(
+                index,
+                new VulkanCommandBuffer(device, commandPool),
+                new VulkanSemaphore(device),
+                new VulkanSemaphore(device),
+                new VulkanFence(device)
+            );
+        }
+
+        @Override
+        public void close() {
+            commandBuffer.close();
+            imageAvailableSemaphore.close();
+            renderFinishedSemaphore.close();
+            inFlightFence.close();
+        }
+    }
 
     public VkRenderer(@NotNull VkWindow window) {
         instance = new VulkanInstance();
@@ -69,21 +93,16 @@ public final class VkRenderer implements Renderer {
             .toList();
         commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
 
-        commandBuffer = new VulkanCommandBuffer(logicalDevice, commandPool);
-
-        imageAvailableSemaphore = new VulkanSemaphore(logicalDevice);
-        renderFinishedSemaphore = new VulkanSemaphore(logicalDevice);
-        inFlightFence = new VulkanFence(logicalDevice);
+        frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
+            .mapToObj((index) -> new FrameState(index, logicalDevice, commandPool))
+            .toList();
     }
 
     @Override
     public void close() {
         logicalDevice.waitForIdle();
 
-        inFlightFence.close();
-        renderFinishedSemaphore.close();
-        imageAvailableSemaphore.close();
-        commandBuffer.close();
+        frameState.forEach(FrameState::close);
         commandPool.close();
         swapchainFramebuffers.forEach(VulkanFramebuffer::close);
         graphicsPipeline.close();
@@ -101,6 +120,14 @@ public final class VkRenderer implements Renderer {
 
     @Override
     public void draw() {
+        var frameState = this.frameState.get(currentFrame);
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+        var commandBuffer = frameState.commandBuffer();
+        var imageAvailableSemaphore = frameState.imageAvailableSemaphore();
+        var renderFinishedSemaphore = frameState.renderFinishedSemaphore();
+        var inFlightFence = frameState.inFlightFence();
+
         inFlightFence.yield();
         int imageIndex = swapchain.acquireNextImage(imageAvailableSemaphore);
 
