@@ -100,7 +100,7 @@ public sealed interface WootingCommon permits Dummy {
 
     @Nullable
     static DeviceInfo new_device_info(short vendor_id, short product_id, @NotNull String manufacturer_name, @NotNull String device_name, long device_id, @MagicConstant(intValues = {WootingAnalog_DeviceType_Keyboard, WootingAnalog_DeviceType_Keypad, WootingAnalog_DeviceType_Other}) int device_type) {
-        try(var arena = Arena.openConfined()) {
+        try(var arena = Arena.ofConfined()) {
             var result = (MemorySegment) NEW_DEVICE_INFO.invokeExact(
                 vendor_id,
                 product_id,

@@ -46,7 +46,7 @@ public class Test {
                 (field) -> field.getName().substring(4).toLowerCase().replaceAll("_", " ")
             ));
 
-        try(var arena = Arena.openConfined()) {
+        try(var arena = Arena.ofConfined()) {
             check(wooting_analog_initialise());
 
             var keyCodes = arena.allocateArray(ValueLayout.JAVA_SHORT, 4).asByteBuffer().order(ByteOrder.nativeOrder()).asShortBuffer();

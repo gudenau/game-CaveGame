@@ -78,7 +78,7 @@ public record DeviceInfoFFI(@NotNull MemorySegment segment) {
 
         // TODO Find a better way, this is hacky
         if(segment.byteSize() == 0) {
-            this.segment = MemorySegment.ofAddress(segment.address(), LAYOUT.byteSize(), segment.scope());
+            this.segment = segment.reinterpret(LAYOUT.byteSize());
         } else {
             this.segment = segment;
         }

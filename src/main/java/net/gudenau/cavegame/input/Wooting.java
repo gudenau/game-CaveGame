@@ -42,7 +42,7 @@ public final class Wooting {
         // Just because
         wooting_analog_set_keycode_mode(WootingAnalog_KeycodeType_HID);
 
-        try(var arena = Arena.openConfined()) {
+        try(var arena = Arena.ofConfined()) {
             var pointers = arena.allocateArray(ValueLayout.ADDRESS, deviceCount);
             result = wooting_analog_get_connected_devices_info(pointers);
             if(result != deviceCount) {
