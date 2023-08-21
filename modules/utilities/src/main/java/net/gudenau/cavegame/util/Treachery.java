@@ -4,12 +4,15 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import sun.misc.Unsafe;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * A bunch of hacks, beware the dragons. (This is undocumented on purpose)
@@ -124,6 +127,30 @@ public final class Treachery {
             LOOKUP.bind(owner, name, type).invokeWithArguments(arguments);
         } catch (Throwable e) {
             new RuntimeException("Failed to invoke " + longClassName(owner.getClass()) + "." + name + type, e).printStackTrace();
+        }
+    }
+
+    public static MethodHandle constructor(Class<?> owner, MethodType type) throws NoSuchMethodException {
+        try {
+            return LOOKUP.findConstructor(owner, type);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Trusted lookup could not access constructor " + longClassName(owner) + type, e);
+        }
+    }
+
+    public static MethodHandle unreflect(Method method) {
+        try {
+            return LOOKUP.unreflect(method);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Trusted lookup could not unreflect " + method, e);
+        }
+    }
+
+    public static <A> MethodHandle handle(Supplier<A> getter) {
+        try {
+            return LOOKUP.bind(getter, "get", MethodType.methodType(Object.class));
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new RuntimeException("Trusted lookup could not ", e);
         }
     }
 }

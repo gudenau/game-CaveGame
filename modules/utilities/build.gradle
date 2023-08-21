@@ -4,4 +4,6 @@ dependencies {
 
     implementation 'org.lwjgl:lwjgl'
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+
+    implementation "com.google.code.gson:gson:${project.gsonVersion}"
 }
