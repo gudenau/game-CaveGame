@@ -1,5 +1,8 @@
 package net.gudenau.cavegame.resource;
 
+import net.gudenau.cavegame.codec.Codec;
+import net.gudenau.cavegame.codec.CodecResult;
+import net.gudenau.cavegame.codec.ops.Operations;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,6 +23,30 @@ public record Identifier(
     @NotNull String namespace,
     @NotNull String path
 ) {
+    public static final Codec<Identifier> CODEC = new Codec.Impartial<>() {
+        @Override
+        public <R> CodecResult<R> encode(Operations<R> operations, Identifier input) {
+            return CodecResult.success(operations.fromString(input.toString()));
+        }
+
+        @Override
+        public <R> CodecResult<Identifier> decode(Operations<R> operations, R input) {
+            return operations.toString(input).flatMap((string) -> {
+                try {
+                    return CodecResult.success(new Identifier(string));
+                } catch (Throwable e) {
+                    return CodecResult.error(() -> '"' + string + "\" is not a valid identifier");
+                }
+            });
+        }
+
+        @Override
+        @NotNull
+        public Class<Identifier> type() {
+            return Identifier.class;
+        }
+    };
+
     /**
      * The namespace predicate used to validate identifiers.
      */
@@ -175,5 +202,21 @@ public record Identifier(
         }
 
         return append("." + extension);
+    }
+
+    @NotNull
+    public Identifier normalize(@NotNull String prefix, @NotNull String suffix) {
+        return new Identifier(namespace, prefix + '/' + path + suffix);
+
+        /*
+        var filename = filename();
+        var directory = directory();
+        var namespace = namespace();
+        if(directory == null) {
+            return new Identifier(namespace, prefix + "/" + filename + suffix);
+        } else {
+            return new Identifier(namespace, prefix + "/" + directory + "/" + filename + suffix);
+        }
+         */
     }
 }

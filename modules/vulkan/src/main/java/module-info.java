@@ -16,4 +16,5 @@ module net.gudenau.cavegame.renderer.vulkan {
     requires org.lwjgl.glfw;
     requires org.lwjgl.vulkan;
     requires org.lwjgl.shaderc;
+    requires org.lwjgl.spvc;
 }

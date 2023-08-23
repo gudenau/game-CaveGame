@@ -7,8 +7,6 @@ module net.gudenau.cavegame {
     exports net.gudenau.cavegame.tile;
     exports net.gudenau.cavegame.level;
 
-    //FIXME Remove
-    requires java.desktop;
     requires jdk.unsupported;
     
     requires org.jetbrains.annotations;

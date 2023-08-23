@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.resource;
 
+import net.gudenau.cavegame.util.MiscUtils;
 import net.gudenau.cavegame.util.Treachery;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -29,14 +30,14 @@ public sealed abstract class ClassPathResourceProvider implements ResourceProvid
         try {
             path = Paths.get(type.getProtectionDomain().getCodeSource().getLocation().toURI());
         } catch (URISyntaxException e) {
-            throw new RuntimeException("Failed to find Path of " + Treachery.longClassName(type), e);
+            throw new RuntimeException("Failed to find Path of " + MiscUtils.longClassName(type), e);
         }
 
         if(Files.isRegularFile(path)) {
             try {
                 return new Archive(path);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to open archive " + path + " for " + Treachery.longClassName(type));
+                throw new RuntimeException("Failed to open archive " + path + " for " + MiscUtils.longClassName(type));
             }
         } else {
             throw new RuntimeException("Not implemented");

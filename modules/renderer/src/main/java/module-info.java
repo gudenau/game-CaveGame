@@ -11,4 +11,5 @@ module net.gudenau.cavegame.renderer {
     requires org.lwjgl.glfw;
 
     requires net.gudenau.cavegame.logger;
+    requires net.gudenau.cavegame.utilities;
 }

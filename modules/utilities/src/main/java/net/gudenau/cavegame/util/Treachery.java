@@ -84,7 +84,7 @@ public final class Treachery {
         try {
             LOOKUP.in(type).ensureInitialized(type);
         } catch (IllegalAccessException e) {
-            throw new RuntimeException("Failed to ensure " + longClassName(type) + " was initialized", e);
+            throw new RuntimeException("Failed to ensure " + MiscUtils.longClassName(type) + " was initialized", e);
         }
         return type;
     }
@@ -104,13 +104,8 @@ public final class Treachery {
         try {
             return (T) UNSAFE.allocateInstance(type);
         } catch (Throwable e) {
-            throw new RuntimeException("Failed to allocate instance of " + longClassName(type), e);
+            throw new RuntimeException("Failed to allocate instance of " + MiscUtils.longClassName(type), e);
         }
-    }
-
-    @NotNull
-    public static String longClassName(@NotNull Class<?> type) {
-        return type.getModule().getName() + '/' + type.getName();
     }
 
     @SuppressWarnings("unchecked")
@@ -118,7 +113,7 @@ public final class Treachery {
         try {
             return (T) LOOKUP.findGetter(owner.getClass(), name, type).invoke(owner);
         } catch (Throwable e) {
-            throw new RuntimeException("Failed to get field " + name + " from " + longClassName(owner.getClass()), e);
+            throw new RuntimeException("Failed to get field " + name + " from " + MiscUtils.longClassName(owner.getClass()), e);
         }
     }
 
@@ -126,7 +121,7 @@ public final class Treachery {
         try {
             LOOKUP.bind(owner, name, type).invokeWithArguments(arguments);
         } catch (Throwable e) {
-            new RuntimeException("Failed to invoke " + longClassName(owner.getClass()) + "." + name + type, e).printStackTrace();
+            new RuntimeException("Failed to invoke " + MiscUtils.longClassName(owner.getClass()) + "." + name + type, e).printStackTrace();
         }
     }
 
@@ -134,7 +129,7 @@ public final class Treachery {
         try {
             return LOOKUP.findConstructor(owner, type);
         } catch (IllegalAccessException e) {
-            throw new RuntimeException("Trusted lookup could not access constructor " + longClassName(owner) + type, e);
+            throw new RuntimeException("Trusted lookup could not access constructor " + MiscUtils.longClassName(owner) + type, e);
         }
     }
 

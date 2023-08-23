@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer.vk;
 
+import net.gudenau.cavegame.renderer.ShaderMeta;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
@@ -7,6 +8,7 @@ import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.VkShaderModuleCreateInfo;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import static org.lwjgl.util.shaderc.Shaderc.*;
 import static org.lwjgl.vulkan.VK10.*;
@@ -18,28 +20,67 @@ public final class VulkanShaderModule implements AutoCloseable {
     private final Type type;
     private final long handle;
 
+    @NotNull
+    private final List<Attribute> inputs;
+    @NotNull
+    private final List<Attribute> outputs;
+
+    private final int inputStride;
+    private final int outputStride;
+
+    public record Attribute(
+        @NotNull String name,
+        int location,
+        ShaderReflection.DataType type,
+        int size,
+        int stride
+    ) {
+        public int format() {
+            return type.format(size);
+        }
+    }
+
     public VulkanShaderModule(@NotNull VulkanLogicalDevice device, @NotNull Type type, @NotNull Identifier identifier) {
         this.device = device;
         this.type = type;
 
-        //TODO Name this and shove it into Identifier.
-        var filename = identifier.filename();
-        var directory = identifier.directory();
-        var namespace = identifier.namespace();
-        Identifier resource;
-        if(directory == null) {
-            resource = new Identifier(namespace, "shader/" + filename + "/vulkan." + type.extension);
-        } else {
-            resource = new Identifier(namespace, "shader/" + directory + "/" + filename + "/vulkan." + type.extension);
-        }
-
-        var source = VulkanUtils.readIntoNativeBuffer(resource);
+        var source = VulkanUtils.readIntoNativeBuffer(identifier);
         ByteBuffer code;
         try(var compiler = ShaderCompiler.acquire()) {
             code = compiler.compile(source, type.shadercType, identifier.toString());
         } finally {
             MemoryUtil.memFree(source);
         }
+
+        try(var reflection = ShaderReflection.acquire(code)) {
+            inputs = reflection.inputs().stream()
+                .map((attribute) -> new Attribute(
+                    attribute.name(),
+                    attribute.location(),
+                    attribute.baseType(),
+                    attribute.vectorSize(),
+                    attribute.size()
+                ))
+                .toList();
+
+            outputs = reflection.outputs().stream()
+                .map((attribute) -> new Attribute(
+                    attribute.name(),
+                    attribute.location(),
+                    attribute.baseType(),
+                    attribute.vectorSize(),
+                    attribute.size()
+                ))
+                .toList();
+        }
+
+        inputStride = inputs.stream()
+            .mapToInt(Attribute::stride)
+            .sum();
+
+        outputStride = outputs.stream()
+            .mapToInt(Attribute::stride)
+            .sum();
 
         try(var stack = MemoryStack.stackPush()) {
             var createInfo = VkShaderModuleCreateInfo.calloc(stack);
@@ -62,6 +103,22 @@ public final class VulkanShaderModule implements AutoCloseable {
         return type;
     }
 
+    public List<Attribute> inputs() {
+        return inputs;
+    }
+
+    public int inputStride() {
+        return inputStride;
+    }
+
+    public List<Attribute> outputs() {
+        return outputs;
+    }
+
+    public int outputStride() {
+        return outputStride;
+    }
+
     public long handle() {
         return handle;
     }
@@ -72,17 +129,14 @@ public final class VulkanShaderModule implements AutoCloseable {
     }
 
     public enum Type {
-        VERTEX("vert", shaderc_vertex_shader, VK_SHADER_STAGE_VERTEX_BIT),
-        FRAGMENT("frag", shaderc_fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT),
+        VERTEX(shaderc_vertex_shader, VK_SHADER_STAGE_VERTEX_BIT),
+        FRAGMENT(shaderc_fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT),
         ;
 
-        @NotNull
-        private final String extension;
         private final int shadercType;
         final int vulkanType;
 
-        Type(@NotNull String extension, int shadercType, int vulkanType) {
-            this.extension = extension;
+        Type(int shadercType, int vulkanType) {
             this.shadercType = shadercType;
             this.vulkanType = vulkanType;
         }

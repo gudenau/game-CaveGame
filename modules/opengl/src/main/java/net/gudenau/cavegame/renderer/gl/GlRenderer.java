@@ -1,12 +1,14 @@
 package net.gudenau.cavegame.renderer.gl;
 
 import net.gudenau.cavegame.renderer.Renderer;
+import net.gudenau.cavegame.renderer.Shader;
 import net.gudenau.cavegame.renderer.Window;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.lwjgl.opengl.GL44.*;
@@ -57,6 +59,11 @@ public final class GlRenderer implements Renderer {
         shader.release();
 
         glBindVertexArray(0);
+    }
+
+    @Override
+    public Optional<Shader> loadShader(@NotNull Identifier basic) {
+        throw new UnsupportedOperationException();
     }
 
     @Override

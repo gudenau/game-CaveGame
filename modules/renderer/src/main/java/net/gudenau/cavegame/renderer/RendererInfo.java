@@ -17,12 +17,5 @@ public interface RendererInfo {
 
     @NotNull Renderer createRenderer(@NotNull Window window);
 
-    @NotNull
-    static RendererInfo of(@NotNull List<@NotNull RendererInfo> rendererInfo) {
-        Objects.requireNonNull(rendererInfo, "renderInfo can't be null");
-
-        return RendererInfoImpl.of(rendererInfo);
-    }
-
     @NotNull Window createWindow(@NotNull String title, int width, int height);
 }

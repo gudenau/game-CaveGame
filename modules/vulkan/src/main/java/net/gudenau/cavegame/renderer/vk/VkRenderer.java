@@ -1,13 +1,24 @@
 package net.gudenau.cavegame.renderer.vk;
 
+import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.Renderer;
+import net.gudenau.cavegame.renderer.Shader;
+import net.gudenau.cavegame.renderer.ShaderMeta;
+import net.gudenau.cavegame.renderer.ShaderType;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
+import org.lwjgl.vulkan.VkVertexInputAttributeDescription;
+import org.lwjgl.vulkan.VkVertexInputBindingDescription;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static net.gudenau.cavegame.resource.Identifier.CAVEGAME_NAMESPACE;
@@ -15,6 +26,8 @@ import static org.lwjgl.vulkan.KHRSwapchain.*;
 import static org.lwjgl.vulkan.VK10.*;
 
 public final class VkRenderer implements Renderer {
+    private static final Logger LOGGER = Logger.forName("Vulkan");
+
     private static final int MAX_FRAMES_IN_FLIGHT = 2;
     private int currentFrame = 0;
     private boolean framebufferResized = false;
@@ -35,8 +48,10 @@ public final class VkRenderer implements Renderer {
     private List<@NotNull VulkanImageView> imageViews;
     @NotNull
     private final VulkanRenderPass renderPass;
+    /*
     @NotNull
     private final VulkanGraphicsPipeline graphicsPipeline;
+     */
     @NotNull
     private List<@NotNull VulkanFramebuffer> swapchainFramebuffers;
     @NotNull
@@ -85,13 +100,6 @@ public final class VkRenderer implements Renderer {
                 .toList();
             renderPass = new VulkanRenderPass(logicalDevice, swapchain);
 
-            var shaderId = new Identifier(CAVEGAME_NAMESPACE, "basic");
-            try (
-                var vertexShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.VERTEX, shaderId);
-                var fragmentShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.FRAGMENT, shaderId)
-            ) {
-                graphicsPipeline = new VulkanGraphicsPipeline(logicalDevice, extent, renderPass, vertexShader, fragmentShader);
-            }
             swapchainFramebuffers = imageViews.stream()
                 .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, extent))
                 .toList();
@@ -100,6 +108,16 @@ public final class VkRenderer implements Renderer {
             frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
                 .mapToObj((index) -> new FrameState(index, logicalDevice, commandPool))
                 .toList();
+
+            /*
+            var shaderId = new Identifier(CAVEGAME_NAMESPACE, "basic");
+            try (
+                var vertexShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.VERTEX, shaderId);
+                var fragmentShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.FRAGMENT, shaderId)
+            ) {
+                graphicsPipeline = new VulkanGraphicsPipeline(logicalDevice, extent, renderPass, vertexShader, fragmentShader);
+            }
+             */
         }
     }
 
@@ -134,7 +152,7 @@ public final class VkRenderer implements Renderer {
 
         frameState.forEach(FrameState::close);
         commandPool.close();
-        graphicsPipeline.close();
+        //graphicsPipeline.close();
         renderPass.close();
         logicalDevice.close();
         physicalDevice.close();
@@ -166,7 +184,7 @@ public final class VkRenderer implements Renderer {
         commandBuffer.reset();
         commandBuffer.begin();
         commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapchainFramebuffers.get(imageIndex));
-        commandBuffer.bindPipeline(graphicsPipeline);
+        //commandBuffer.bindPipeline(graphicsPipeline);
         commandBuffer.setViewport(swapchain.extent().width(), swapchain.extent().height());
         commandBuffer.setScissor(0, 0, swapchain.extent().width(), swapchain.extent().height());
         commandBuffer.draw(3, 1, 0, 0);
@@ -190,6 +208,45 @@ public final class VkRenderer implements Renderer {
                 framebufferResized = false;
                 recreateSwapChain();
             }
+        }
+    }
+
+    @Override
+    public Optional<Shader> loadShader(@NotNull Identifier shader) {
+        Map<ShaderType, ShaderMeta> metadata;
+        {
+            var result = ShaderMeta.load(shader);
+            var partial = result.partial();
+            if (partial.isPresent()) {
+                LOGGER.error("Failed to load shader metadata for " + shader + '\n' + partial.get().error());
+                return Optional.empty();
+            }
+            metadata = result.getResult();
+        }
+
+        var modules = metadata.entrySet().stream().map((entry) -> {
+                var key = entry.getKey();
+                var value = entry.getValue();
+                // public VulkanShaderModule(@NotNull VulkanLogicalDevice device, @NotNull Type type, @NotNull Identifier identifier) {
+                var type = switch (key) {
+                    case FRAGMENT -> VulkanShaderModule.Type.FRAGMENT;
+                    case VERTEX -> VulkanShaderModule.Type.VERTEX;
+                };
+                return new VulkanShaderModule(
+                    logicalDevice,
+                    type,
+                    value.files().get("vulkan").normalize("shader", '.' + key.extension())
+                );
+            })
+            .collect(Collectors.toUnmodifiableMap(VulkanShaderModule::type, Function.identity()));
+
+        try(var stack = MemoryStack.stackPush()) {
+            return Optional.of(new VkShader(new VulkanGraphicsPipeline(
+                logicalDevice,
+                physicalDevice.surfaceExtent(stack),
+                renderPass,
+                modules
+            )));
         }
     }
 }

@@ -1,0 +1,22 @@
+{
+  "vertex": {
+    "attributes": {
+      "inPosition": {
+        "type": "position"
+      },
+      "inColor": {
+        "type": "color"
+      }
+    },
+    "files": {
+      "opengl": "cave_game:basic/opengl",
+      "vulkan": "cave_game:basic/vulkan"
+    }
+  },
+  "fragment": {
+    "files": {
+      "opengl": "cave_game:basic/opengl",
+      "vulkan": "cave_game:basic/vulkan"
+    }
+  }
+}

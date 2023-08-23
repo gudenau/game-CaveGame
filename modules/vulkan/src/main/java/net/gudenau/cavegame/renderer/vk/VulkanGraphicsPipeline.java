@@ -4,6 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
+import java.util.Map;
+
+import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.VK10.*;
 
 public final class VulkanGraphicsPipeline implements AutoCloseable {
@@ -16,7 +19,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
         @NotNull VulkanLogicalDevice device,
         @NotNull VkExtent2D viewportExtent,
         @NotNull VulkanRenderPass renderPass,
-        @NotNull VulkanShaderModule @NotNull ... shaders
+        @NotNull Map<VulkanShaderModule.Type, VulkanShaderModule> shaders
     ) {
         this.device = device;
 
@@ -28,10 +31,32 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 VK_DYNAMIC_STATE_SCISSOR
             ));
 
+            var vertex = shaders.get(VulkanShaderModule.Type.VERTEX);
+
+            var bindingDescriptions = VkVertexInputBindingDescription.calloc(1, stack);
+            var bindingDescription = bindingDescriptions.get(0);
+            bindingDescription.binding(0);
+            bindingDescription.stride(vertex.inputStride());
+            bindingDescription.inputRate(VK_VERTEX_INPUT_RATE_VERTEX);
+
+            var inputAttributes = vertex.inputs();
+            var attributeDescriptions = VkVertexInputAttributeDescription.calloc(inputAttributes.size(), stack);
+            int offset = 0;
+            for(var attribute : inputAttributes) {
+                attributeDescriptions.get().set(
+                    attribute.location(),
+                    0,
+                    attribute.format(),
+                    offset
+                );
+                offset += attribute.stride();
+            }
+            attributeDescriptions.flip();
+
             var vertexInputInfo = VkPipelineVertexInputStateCreateInfo.calloc(stack);
             vertexInputInfo.sType$Default();
-            vertexInputInfo.pVertexBindingDescriptions(null);
-            vertexInputInfo.pVertexAttributeDescriptions(null);
+            vertexInputInfo.pVertexBindingDescriptions(bindingDescriptions);
+            vertexInputInfo.pVertexAttributeDescriptions(attributeDescriptions);
 
             var inputAssembly = VkPipelineInputAssemblyStateCreateInfo.calloc(stack);
             inputAssembly.sType$Default();
@@ -98,15 +123,19 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             }
             pipelineLayout = pointer.get(0);
 
-            var shaderInfo = VkPipelineShaderStageCreateInfo.calloc(shaders.length, stack);
+            var shaderInfo = VkPipelineShaderStageCreateInfo.calloc(shaders.size(), stack);
             var shaderMain = stack.UTF8("main");
-            for(int i = 0, length = shaders.length; i < length; i++) {
-                var shader = shaders[i];
-                shaderInfo.position(i);
-                shaderInfo.sType$Default();
-                shaderInfo.stage(shader.type().vulkanType);
-                shaderInfo.module(shader.handle());
-                shaderInfo.pName(shaderMain);
+            for(var shader : shaders.values()) {
+                //noinspection resource
+                shaderInfo.get().set(
+                    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                    NULL,
+                    0,
+                    shader.type().vulkanType,
+                    shader.handle(),
+                    shaderMain,
+                    null
+                );
             }
             shaderInfo.clear();
 

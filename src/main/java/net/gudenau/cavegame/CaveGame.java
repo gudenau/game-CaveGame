@@ -1,36 +1,20 @@
 package net.gudenau.cavegame;
 
-import net.gudenau.cavegame.actor.MinerActor;
-import net.gudenau.cavegame.actor.ResourceActor;
-import net.gudenau.cavegame.ai.JobTypes;
-import net.gudenau.cavegame.ai.MiningJob;
 import net.gudenau.cavegame.config.Config;
-import net.gudenau.cavegame.input.Wooting;
-import net.gudenau.cavegame.level.Level;
-import net.gudenau.cavegame.level.TilePos;
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
-import net.gudenau.cavegame.material.Materials;
 import net.gudenau.cavegame.renderer.GlfwUtils;
 import net.gudenau.cavegame.renderer.RendererInfo;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
-import net.gudenau.cavegame.tile.Tile;
-import net.gudenau.cavegame.tile.Tiles;
-import net.gudenau.cavegame.tile.WallTile;
-import net.gudenau.cavegame.util.*;
+import org.jetbrains.annotations.NotNull;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 import org.lwjgl.system.Configuration;
 
-import javax.imageio.ImageIO;
-import javax.swing.*;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class CaveGame {
     public static final String NAMESPACE = Identifier.CAVEGAME_NAMESPACE;
@@ -50,6 +34,28 @@ public final class CaveGame {
 
         GlfwUtils.handoverMain(CaveGame::newMain);
     }
+
+    private record Vertex(
+        @NotNull Vector2f pos,
+        @NotNull Vector3f color
+    ) {
+        private static List<Vertex> of(float @NotNull [] @NotNull [] values) {
+            var vertices = new ArrayList<Vertex>(values.length / 2);
+            for(int i = 0, length = values.length; i < length; i += 2) {
+                vertices.add(new Vertex(
+                    new Vector2f(values[i]),
+                    new Vector3f(values[i + 1])
+                ));
+            }
+            return List.copyOf(vertices);
+        }
+    }
+
+    private static final List<Vertex> vertices = Vertex.of(new float[][]{
+        { 0.0F, -0.5F}, {1.0F, 0.0F, 0.0F},
+        { 0.5F,  0.5F}, {0.0F, 1.0F, 0.0F},
+        {-0.5f,  0.5F}, {0.0F, 0.0F, 1.0F}
+    });
 
     private static void newMain() {
         ResourceLoader.registerProvider(NAMESPACE, ClassPathResourceProvider.of(CaveGame.class));
@@ -79,6 +85,10 @@ public final class CaveGame {
             var renderer = rendererInfo.createRenderer(window);
         ) {
             window.bind();
+
+            var basicShader = renderer.loadShader(new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic"))
+                .orElseThrow(() -> new RuntimeException("Failed to load basic shader"));
+
             window.visible(true);
 
             do {
@@ -101,12 +111,7 @@ public final class CaveGame {
 
 
 
-        if(true || false) {
-            return;
-        }
-
-
-
+        /*
         Treachery.ensureInitialized(Registries.class, Tiles.class, Materials.class, JobTypes.class);
 
         Wooting.initialize();
@@ -149,7 +154,7 @@ public final class CaveGame {
             level.spawn(new MinerActor(4.5, 5.5, level));
             level.spawn(new MinerActor(6.5, 5.5, level));
         }
-         */
+         * /
 
         TilePos.iterator(0, 0, level.width(), level.height()).forEachRemaining((pos) -> {
             var tile = level.tile(pos);
@@ -218,7 +223,7 @@ public final class CaveGame {
                             g.fillRect((node.x() << 5) + 8, (node.y() << 5) + 8, 16, 16);
                         }
                     }
-                     */
+                     * /
 
                     var x = actor.x() * 32;
                     var y = actor.y() * 32;
@@ -242,5 +247,6 @@ public final class CaveGame {
                 Thread.sleep(200);
             } catch (InterruptedException ignored) {}
         }
+         */
     }
 }

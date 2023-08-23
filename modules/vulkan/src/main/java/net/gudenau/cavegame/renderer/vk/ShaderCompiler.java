@@ -26,6 +26,7 @@ public final class ShaderCompiler implements AutoCloseable {
         shaderc_compile_options_set_optimization_level(BASE_OPTIONS, shaderc_optimization_level_performance);
         shaderc_compile_options_set_target_env(BASE_OPTIONS, shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
         shaderc_compile_options_set_warnings_as_errors(BASE_OPTIONS);
+        shaderc_compile_options_set_generate_debug_info(BASE_OPTIONS);
     }
 
     static {
