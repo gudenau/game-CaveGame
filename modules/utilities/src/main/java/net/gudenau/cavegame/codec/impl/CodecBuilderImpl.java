@@ -4,20 +4,16 @@ import net.gudenau.cavegame.codec.Codec;
 import net.gudenau.cavegame.codec.CodecBuilder;
 import net.gudenau.cavegame.codec.CodecResult;
 import net.gudenau.cavegame.codec.ops.Operations;
+import net.gudenau.cavegame.util.MiscUtils;
 import net.gudenau.cavegame.util.Treachery;
-import net.jodah.typetools.TypeResolver;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public final class CodecBuilderImpl<T> implements CodecBuilder<T> {
     private record Argument<T>(
@@ -29,20 +25,20 @@ public final class CodecBuilderImpl<T> implements CodecBuilder<T> {
 
     private final List<Argument<?>> arguments = new ArrayList<>();
 
-    private <A> void argument(String name, Codec<A> codec, Supplier<A> getter, boolean required) {
+    private <A> void argument(String name, Codec<A> codec, Function<T, A> getter, boolean required) {
         arguments.add(new Argument<>(name, codec, codec.type(), required));
     }
 
     @Override
     @NotNull
-    public <A> CodecBuilder<T> required(@NotNull String name, @NotNull Codec<A> codec, @NotNull Supplier<A> getter) {
+    public <A> CodecBuilder<T> required(@NotNull String name, @NotNull Codec<A> codec, @NotNull Function<T, A> getter) {
         argument(name, codec, getter, true);
         return this;
     }
 
     @Override
     @NotNull
-    public <A> CodecBuilder<T> optional(@NotNull String name, @NotNull Codec<A> codec, @NotNull Supplier<A> getter) {
+    public <A> CodecBuilder<T> optional(@NotNull String name, @NotNull Codec<A> codec, @NotNull Function<T, A> getter) {
         argument(name, codec, getter, false);
         return this;
     }
@@ -82,7 +78,7 @@ public final class CodecBuilderImpl<T> implements CodecBuilder<T> {
                                 return;
                             }
 
-                            errors.add("Required argument " + name + " is missing");
+                            errors.add("Required argument \"" + name + "\" is missing");
                             state.fatalError = true;
                         }
 
@@ -110,7 +106,7 @@ public final class CodecBuilderImpl<T> implements CodecBuilder<T> {
                         //noinspection unchecked
                         instance = (T) factory.invokeWithArguments(values);
                     } catch (Throwable e) {
-                        return CodecResult.error(() -> "Failed to construct " + Treachery.longClassName(factory.type().returnType()) + ": " + e.getMessage());
+                        return CodecResult.error(() -> "Failed to construct " + MiscUtils.longClassName(factory.type().returnType()) + ": " + e.getMessage());
                     }
 
                     if(errors.isEmpty()) {
@@ -143,7 +139,7 @@ public final class CodecBuilderImpl<T> implements CodecBuilder<T> {
             );
             return CodecCache.put(codec);
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException("Failed to find constructor for " + Treachery.longClassName(type), e);
+            throw new RuntimeException("Failed to find constructor for " + MiscUtils.longClassName(type), e);
         }
     }
 }

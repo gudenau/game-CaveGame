@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.invoke.MethodHandle;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public sealed interface CodecBuilder<T> permits CodecBuilderImpl {
@@ -47,9 +48,9 @@ public sealed interface CodecBuilder<T> permits CodecBuilderImpl {
             var codec = CodecCache.find(component.getType());
 
             var getterHandle = Treachery.unreflect(component.getAccessor());
-            Supplier getter = () -> {
+            Function getter = (instance) -> {
                 try {
-                    return getterHandle.invoke();
+                    return getterHandle.invoke(instance);
                 } catch (Throwable e) {
                     throw new RuntimeException("Failed to invoke getter for " + component.getName());
                 }
@@ -66,11 +67,11 @@ public sealed interface CodecBuilder<T> permits CodecBuilderImpl {
 
     @NotNull
     @Contract("_, _, _ -> this")
-    <A> CodecBuilder<T> required(@NotNull String name, @NotNull Codec<A> codec, @NotNull Supplier<A> getter);
+    <A> CodecBuilder<T> required(@NotNull String name, @NotNull Codec<A> codec, @NotNull Function<T, A> getter);
 
     @NotNull
     @Contract("_, _, _ -> this")
-    <A> CodecBuilder<T> optional(@NotNull String name, @NotNull Codec<A> codec, @NotNull Supplier<A> getter);
+    <A> CodecBuilder<T> optional(@NotNull String name, @NotNull Codec<A> codec, @NotNull Function<T, A> getter);
 
     @NotNull
     Codec<T> build(@NotNull MethodHandle factory);

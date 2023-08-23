@@ -1,9 +1,12 @@
 package net.gudenau.cavegame.codec.ops;
 
 import com.google.gson.*;
+import net.gudenau.cavegame.codec.Codec;
 import net.gudenau.cavegame.codec.CodecResult;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.BufferedReader;
+import java.io.Reader;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -16,6 +19,16 @@ public final class JsonOps implements Operations<JsonElement> {
         if(INSTANCE != null) {
             throw new AssertionError();
         }
+    }
+
+    @NotNull
+    public static <T> CodecResult<T> decode(@NotNull Reader reader, @NotNull Codec<T> codec) {
+        return codec.decode(INSTANCE, JsonParser.parseReader(reader));
+    }
+
+    @NotNull
+    public static <T> CodecResult<T> decode(@NotNull String string, @NotNull Codec<T> codec) {
+        return codec.decode(INSTANCE, JsonParser.parseString(string));
     }
 
     @Override
@@ -126,6 +139,9 @@ public final class JsonOps implements Operations<JsonElement> {
     @Override
     @NotNull
     public CodecResult<Map<JsonElement, JsonElement>> toMap(JsonElement value) {
+        if(value == null) {
+            return CodecResult.error(() -> "value was \"null\" instead of an object");
+        }
         if(!(value instanceof JsonObject object)) {
             return CodecResult.error(() -> "value was not an object, got " + value.getClass().getSimpleName() + " instead");
         }

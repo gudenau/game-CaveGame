@@ -2,7 +2,7 @@ package net.gudenau.cavegame.codec.impl;
 
 import net.gudenau.cavegame.codec.Codec;
 import net.gudenau.cavegame.codec.CodecBuilder;
-import net.gudenau.cavegame.util.Treachery;
+import net.gudenau.cavegame.util.MiscUtils;
 import net.gudenau.cavegame.util.collection.SharedSet;
 import net.gudenau.cavegame.util.collection.SharedSoftMap;
 import org.jetbrains.annotations.NotNull;
@@ -50,7 +50,7 @@ public final class CodecCache {
         }
 
         if(!GENERATING.add(type)) {
-            throw new IllegalStateException("Class " + Treachery.longClassName(type) + " already has a CODEC being generated!");
+            throw new IllegalStateException("Class " + MiscUtils.longClassName(type) + " already has a CODEC being generated!");
         }
         try {
             codec = create(type);
@@ -68,7 +68,7 @@ public final class CodecCache {
         } else if(type.isEnum()) {
             return (Codec<T>) EnumCodec.of((Class) type);
         } else {
-            throw new IllegalStateException("Don't know how to convert " + Treachery.longClassName(type) + " into a CODEC");
+            throw new IllegalStateException("Don't know how to convert " + MiscUtils.longClassName(type) + " into a CODEC");
         }
     }
 

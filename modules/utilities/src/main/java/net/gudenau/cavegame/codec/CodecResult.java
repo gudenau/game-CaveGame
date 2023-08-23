@@ -1,8 +1,10 @@
 package net.gudenau.cavegame.codec;
 
+import net.gudenau.cavegame.util.MiscUtils;
 import net.gudenau.cavegame.util.collection.Either;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -25,6 +27,10 @@ public class CodecResult<T> {
 
     public static <T> CodecResult<T> error(T partial, Supplier<String> message) {
         return new CodecResult<>(Either.right(PartialResult.of(partial, message)));
+    }
+
+    public static <T> CodecResult<T> error(String message, Throwable exception) {
+        return new CodecResult<>(Either.right(PartialResult.of(() -> message + MiscUtils.stringifyException(exception))));
     }
 
     @NotNull
