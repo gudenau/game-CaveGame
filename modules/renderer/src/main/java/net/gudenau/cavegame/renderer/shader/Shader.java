@@ -9,8 +9,4 @@ public interface Shader extends AutoCloseable {
     @NotNull BufferBuilder builder();
 
     VertexFormat format();
-
-    record Attribute(
-        
-    ) {}
 }
