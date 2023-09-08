@@ -195,7 +195,7 @@ public final class VkRenderer implements Renderer {
         var imageAvailableSemaphore = currentFrameState.imageAvailableSemaphore();
         var inFlightFence = currentFrameState.inFlightFence();
 
-        commandBuffer.end();
+        commandBuffer.endRenderPass();
         commandBuffer.submit(logicalDevice.graphicsQueue(), imageAvailableSemaphore, renderFinishedSemaphore, inFlightFence);
 
         try(var stack = MemoryStack.stackPush()) {
@@ -277,6 +277,6 @@ public final class VkRenderer implements Renderer {
     @NotNull
     @Override
     public VkGraphicsBuffer createBuffer(@NotNull BufferType type, int size) {
-        return new VkGraphicsBuffer(logicalDevice, type, size);
+        return new VkGraphicsBuffer(logicalDevice, commandPool, type, size);
     }
 }

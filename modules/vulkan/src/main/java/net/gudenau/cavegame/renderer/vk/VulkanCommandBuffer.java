@@ -43,9 +43,16 @@ public final class VulkanCommandBuffer implements AutoCloseable {
     }
 
     public void begin() {
+        begin(false);
+    }
+
+    public void begin(boolean oneTime) {
         try(var stack = MemoryStack.stackPush()) {
             var beginInfo = VkCommandBufferBeginInfo.calloc(stack);
             beginInfo.sType$Default();
+            beginInfo.flags(
+                oneTime ? VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT : 0
+            );
 
             var result = vkBeginCommandBuffer(handle, beginInfo);
             if(result != VK_SUCCESS) {
@@ -54,8 +61,12 @@ public final class VulkanCommandBuffer implements AutoCloseable {
         }
     }
 
-    public void end() {
+    public void endRenderPass() {
         vkCmdEndRenderPass(handle);
+        end();
+    }
+
+    public void end() {
         var result = vkEndCommandBuffer(handle);
         if(result != VK_SUCCESS) {
             throw new RuntimeException("Failed to end Vulkan command buffer");
@@ -113,6 +124,31 @@ public final class VulkanCommandBuffer implements AutoCloseable {
     public void bindVertexBuffer(VkGraphicsBuffer buffer) {
         try(var stack = MemoryStack.stackPush()) {
             vkCmdBindVertexBuffers(handle, 0, stack.longs(buffer.handle()), stack.longs(0));
+        }
+    }
+
+    public void copyBuffer(long source, long sourceOff, long destination, long destOff, long size) {
+        try(var stack = MemoryStack.stackPush()) {
+            var copies = VkBufferCopy.calloc(1, stack);
+            //noinspection resource
+            copies.get(0).set(
+                sourceOff,
+                destOff,
+                size
+            );
+            vkCmdCopyBuffer(handle, source, destination, copies);
+        }
+    }
+
+    public void submit(@NotNull VkQueue queue) {
+        try(var stack = MemoryStack.stackPush()) {
+            var submitInfo = VkSubmitInfo.calloc(stack);
+            submitInfo.sType$Default();
+            submitInfo.pCommandBuffers(stack.pointers(handle));
+            var result = vkQueueSubmit(queue, submitInfo, VK_NULL_HANDLE);
+            if(result != VK_SUCCESS) {
+                throw new RuntimeException("Failed to submit Vulkan queue: " + VulkanUtils.errorString(result));
+            }
         }
     }
 
