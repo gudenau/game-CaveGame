@@ -3,6 +3,7 @@ package net.gudenau.cavegame;
 import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
+import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.GlfwUtils;
 import net.gudenau.cavegame.renderer.RendererInfo;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
@@ -61,24 +62,46 @@ public final class CaveGame {
 
             var basicShader = closer.add(renderer.loadShader(new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic")));
 
+            /*
+{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+             */
+
             var builder = basicShader.builder();
-            builder.position(+0.0F, -0.5F)
+            builder.position(-0.5F, -0.5F)
                 .color(1, 0, 0)
                 .next();
-            builder.position(+0.5F, +0.5F)
+            builder.position(+0.5F, -0.5F)
                 .color(0, 1, 0)
                 .next();
-            builder.position(-0.5F,  +0.5F)
+            builder.position(+0.5F,  +0.5F)
                 .color(0, 0, 1)
                 .next();
 
-            var triangleBuffer = closer.add(builder.build());
+            builder.position(+0.5F,  +0.5F)
+                .color(0, 0, 1)
+                .next();
+            builder.position(-0.5F, +0.5F)
+                .color(1, 1, 1)
+                .next();
+            builder.position(-0.5F,  -0.5F)
+                .color(1, 0, 0)
+                .next();
+
+            var triangleBuffers = builder.build();
+            var vertexBuffer = triangleBuffers.get(BufferType.VERTEX);
+            var indexBuffer = triangleBuffers.get(BufferType.INDEX);
+            closer.add(vertexBuffer, indexBuffer);
 
             window.visible(true);
 
             do {
                 renderer.begin();
-                renderer.drawBuffer(triangleBuffer);
+                renderer.drawBuffer(6, vertexBuffer, indexBuffer);
                 renderer.draw();
 
                 window.flip();

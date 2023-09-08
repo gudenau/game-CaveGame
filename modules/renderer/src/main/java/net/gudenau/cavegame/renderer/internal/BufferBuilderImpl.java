@@ -1,6 +1,11 @@
 package net.gudenau.cavegame.renderer.internal;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.gudenau.cavegame.renderer.BufferBuilder;
+import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.GraphicsBuffer;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import org.jetbrains.annotations.NotNull;
@@ -8,13 +13,11 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.Function;
+import java.util.*;
+import java.util.function.BiFunction;
 
 //TODO This is trash, fix it.
+//TODO Don't assume 16 bit indices
 public class BufferBuilderImpl implements BufferBuilder {
     private record Data(float[] elements) {
         public int put(int offset, @NotNull ByteBuffer buffer) {
@@ -24,29 +27,43 @@ public class BufferBuilderImpl implements BufferBuilder {
             }
             return offset;
         }
-    }
 
-    private static final class Vertex {
-        private final @Nullable Data position;
-        private final @Nullable Data color;
-
-        private Vertex(@Nullable Data position, @Nullable Data color) {
-            this.position = position;
-            this.color = color;
+        @Override
+        public boolean equals(Object o) {
+            if(this == o) return true;
+            if(o == null || getClass() != o.getClass()) return false;
+            Data data = (Data) o;
+            return Arrays.equals(elements, data.elements);
         }
 
-        public void put(int offset, ByteBuffer buffer) {
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(elements);
+        }
+
+        @Override
+        public String toString() {
+            return "Data{" +
+                "elements=" + Arrays.toString(elements) +
+                '}';
+        }
+    }
+
+    private record Vertex(@Nullable Data position, @Nullable Data color) {
+        public int put(int offset, ByteBuffer buffer) {
             if(position != null) {
                 offset = position.put(offset, buffer);
             }
             if(color != null) {
-                color.put(offset, buffer);
+                offset = color.put(offset, buffer);
             }
+            return offset;
         }
     }
 
-    private final Function<ByteBuffer, GraphicsBuffer> factory;
-    private final List<Vertex> vertices = new ArrayList<>();
+    private final BiFunction<ByteBuffer, BufferType, GraphicsBuffer> factory;
+    private final Object2IntMap<Vertex> vertices = new Object2IntOpenHashMap<>();
+    private final IntList indices = new IntArrayList();
     private final int stride;
 
     private final int positionOffset;
@@ -57,7 +74,7 @@ public class BufferBuilderImpl implements BufferBuilder {
     private final int colorSize;
     private Data color;
 
-    public BufferBuilderImpl(@NotNull Shader shader, @NotNull Function<ByteBuffer, GraphicsBuffer> factory) {
+    public BufferBuilderImpl(@NotNull Shader shader, @NotNull BiFunction<ByteBuffer, BufferType, GraphicsBuffer> factory) {
         this.factory = factory;
 
         var format = shader.format();
@@ -114,27 +131,45 @@ public class BufferBuilderImpl implements BufferBuilder {
             throw new IllegalStateException("Missing color data");
         }
 
-        vertices.add(new Vertex(position, color));
+        var vertex = new Vertex(position, color);
+        var size = vertices.size();
+        var index = vertices.getOrDefault(vertex, size);
+        if(size == index) {
+            vertices.put(vertex, index);
+        }
+
+        indices.add(index);
+
         position = null;
         color = null;
 
         return this;
     }
 
-    @NotNull
     @Override
-    public GraphicsBuffer build() {
-        int size = vertices.size() * stride;
-        var buffer = MemoryUtil.memAlloc(size);
+    public @NotNull Map<BufferType, GraphicsBuffer> build() {
+        var vertexBuffer = MemoryUtil.memAlloc(vertices.size() * stride);
+        var indexBuffer = MemoryUtil.memAlloc(indices.size() * Short.BYTES);
+
         try {
-            int offset = 0;
-            for(Vertex vertex : vertices) {
-                vertex.put(offset, buffer);
-                offset += stride;
+            vertices.object2IntEntrySet().stream()
+                .sorted(Comparator.comparingInt(Object2IntMap.Entry::getIntValue))
+                .forEachOrdered((entry) -> {
+                    vertexBuffer.position(entry.getKey().put(vertexBuffer.position(), vertexBuffer));
+                });
+            vertexBuffer.position(0);
+
+            for(int i = 0, size = indices.size(); i < size; i++) {
+                indexBuffer.putShort(i << 1, (short) indices.getInt(i));
             }
-            return factory.apply(buffer);
+
+            return Map.of(
+                BufferType.VERTEX, factory.apply(vertexBuffer, BufferType.VERTEX),
+                BufferType.INDEX, factory.apply(indexBuffer, BufferType.INDEX)
+            );
         } finally {
-            MemoryUtil.memFree(buffer);
+            MemoryUtil.memFree(indexBuffer);
+            MemoryUtil.memFree(vertexBuffer);
         }
     }
 }

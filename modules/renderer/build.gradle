@@ -1,4 +1,6 @@
 dependencies {
+    implementation "it.unimi.dsi:fastutil:${project.fastutilVersion}"
+
     implementation 'org.lwjgl:lwjgl'
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
 

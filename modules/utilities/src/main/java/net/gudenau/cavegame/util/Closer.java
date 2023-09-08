@@ -36,6 +36,19 @@ public final class Closer implements AutoCloseable {
     }
 
     /**
+     * Adds items to be closed later.
+     *
+     * @param elements The items to be closed
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends AutoCloseable> void add(@NotNull T @NotNull ... elements) {
+        lock.lock(() -> {
+            ensureOpen();
+            Collections.addAll(this.elements, elements);
+        });
+    }
+
+    /**
      * Removes and closes an element without closing all other elements.
      *
      * @param element The item to be closed

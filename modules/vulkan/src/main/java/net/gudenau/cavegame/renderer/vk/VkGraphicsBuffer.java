@@ -35,6 +35,7 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
             createBuffer(
                 switch(type) {
                     case VERTEX -> VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                    case INDEX -> VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
                 } | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 handlePointer,
@@ -142,6 +143,7 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
                 commandBuffer.copyBuffer(staging, 0, handle, 0, size);
                 commandBuffer.end();
                 commandBuffer.submit(device.graphicsQueue());
+                vkQueueWaitIdle(device.graphicsQueue());
             }
 
             vkDestroyBuffer(device.handle(), staging, VulkanAllocator.get());

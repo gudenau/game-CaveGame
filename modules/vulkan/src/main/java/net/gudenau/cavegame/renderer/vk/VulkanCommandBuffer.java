@@ -121,10 +121,19 @@ public final class VulkanCommandBuffer implements AutoCloseable {
         vkCmdDraw(handle, vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
+    public void drawIndexed(int indexCount, int instanceCount, int firstIndex, int vertexOffset, int firstInstance) {
+        vkCmdDrawIndexed(handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    }
+
     public void bindVertexBuffer(VkGraphicsBuffer buffer) {
         try(var stack = MemoryStack.stackPush()) {
             vkCmdBindVertexBuffers(handle, 0, stack.longs(buffer.handle()), stack.longs(0));
         }
+    }
+
+    public void bindIndexBuffer(VkGraphicsBuffer buffer) {
+        //TODO Don't assume 16 bit index buffers
+        vkCmdBindIndexBuffer(handle, buffer.handle(), 0, VK_INDEX_TYPE_UINT16);
     }
 
     public void copyBuffer(long source, long sourceOff, long destination, long destOff, long size) {

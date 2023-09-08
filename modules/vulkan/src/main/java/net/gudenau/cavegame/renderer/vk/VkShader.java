@@ -25,8 +25,8 @@ public class VkShader implements Shader {
     @NotNull
     @Override
     public BufferBuilder builder() {
-        return BufferBuilder.create(this, (data) -> {
-            var buffer = renderer.createBuffer(BufferType.VERTEX, data.remaining());
+        return BufferBuilder.create(this, (data, type) -> {
+            var buffer = renderer.createBuffer(type, data.remaining());
             buffer.shader(this);
             buffer.upload(data);
             return buffer;

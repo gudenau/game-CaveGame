@@ -8,6 +8,8 @@ module net.gudenau.cavegame.renderer {
 
     requires org.jetbrains.annotations;
 
+    requires it.unimi.dsi.fastutil;
+
     requires org.lwjgl;
     requires org.lwjgl.glfw;
 

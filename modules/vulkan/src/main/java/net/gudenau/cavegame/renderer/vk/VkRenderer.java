@@ -178,14 +178,19 @@ public final class VkRenderer implements Renderer {
     }
 
     @Override
-    public void drawBuffer(@NotNull GraphicsBuffer buffer) {
+    public void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer) {
         var commandBuffer = currentFrameState.commandBuffer;
         commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapchainFramebuffers.get(currentImageIndex));
-        commandBuffer.bindPipeline(((VkShader)buffer.shader()).pipeline());
+        commandBuffer.bindPipeline(((VkShader) vertexBuffer.shader()).pipeline());
         commandBuffer.setViewport(swapchain.extent().width(), swapchain.extent().height());
         commandBuffer.setScissor(0, 0, swapchain.extent().width(), swapchain.extent().height());
-        commandBuffer.bindVertexBuffer((VkGraphicsBuffer) buffer);
-        commandBuffer.draw(3, 1, 0, 0);
+        commandBuffer.bindVertexBuffer((VkGraphicsBuffer) vertexBuffer);
+        if(indexBuffer != null) {
+            commandBuffer.bindIndexBuffer((VkGraphicsBuffer) indexBuffer);
+            commandBuffer.drawIndexed(vertexCount, 1, 0, 0, 0);
+        } else {
+            commandBuffer.draw(vertexCount, 1, 0, 0);
+        }
     }
 
     @Override

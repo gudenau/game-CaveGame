@@ -4,9 +4,9 @@ import net.gudenau.cavegame.renderer.*;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.Optional;
 
 import static org.lwjgl.opengl.GL44.*;
 
@@ -69,7 +69,7 @@ public final class GlRenderer implements Renderer {
     }
 
     @Override
-    public void drawBuffer(@NotNull GraphicsBuffer buffer) {
+    public void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer) {
         throw new UnsupportedOperationException();
     }
 

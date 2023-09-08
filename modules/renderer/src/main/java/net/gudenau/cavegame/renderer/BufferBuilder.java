@@ -6,12 +6,14 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public interface BufferBuilder {
     @NotNull
     @Contract("_, _ -> new")
-    static BufferBuilder create(@NotNull Shader shader, @NotNull Function<ByteBuffer, GraphicsBuffer> factory) {
+    static BufferBuilder create(@NotNull Shader shader, @NotNull BiFunction<ByteBuffer, BufferType, GraphicsBuffer> factory) {
         return new BufferBuilderImpl(shader, factory);
     }
 
@@ -39,5 +41,5 @@ public interface BufferBuilder {
     @NotNull
     BufferBuilder next();
 
-    @NotNull GraphicsBuffer build();
+    @NotNull Map<BufferType, GraphicsBuffer> build();
 }

@@ -3,8 +3,7 @@ package net.gudenau.cavegame.renderer;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Optional;
+import org.jetbrains.annotations.Nullable;
 
 public interface Renderer extends AutoCloseable {
     @Override void close();
@@ -16,7 +15,7 @@ public interface Renderer extends AutoCloseable {
     @NotNull
     GraphicsBuffer createBuffer(@NotNull BufferType type, int size);
 
-    void drawBuffer(@NotNull GraphicsBuffer buffer);
+    void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer);
 
     void begin();
 
