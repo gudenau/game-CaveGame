@@ -2,6 +2,7 @@ import net.gudenau.cavegame.renderer.RendererInfo;
 
 module net.gudenau.cavegame.renderer {
     exports net.gudenau.cavegame.renderer;
+    exports net.gudenau.cavegame.renderer.shader;
 
     uses RendererInfo;
 

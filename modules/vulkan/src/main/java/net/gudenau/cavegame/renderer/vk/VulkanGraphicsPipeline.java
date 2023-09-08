@@ -1,10 +1,12 @@
 package net.gudenau.cavegame.renderer.vk;
 
+import net.gudenau.cavegame.renderer.shader.VertexAttribute;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
-import java.util.Map;
+import java.util.Collection;
+import java.util.List;
 
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.VK10.*;
@@ -19,7 +21,8 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
         @NotNull VulkanLogicalDevice device,
         @NotNull VkExtent2D viewportExtent,
         @NotNull VulkanRenderPass renderPass,
-        @NotNull Map<VulkanShaderModule.Type, VulkanShaderModule> shaders
+        @NotNull Collection<VulkanShaderModule> modules,
+        @NotNull VkVertexFormat format
     ) {
         this.device = device;
 
@@ -31,22 +34,21 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 VK_DYNAMIC_STATE_SCISSOR
             ));
 
-            var vertex = shaders.get(VulkanShaderModule.Type.VERTEX);
-
+            var inputs = format.attributes().values();
             var bindingDescriptions = VkVertexInputBindingDescription.calloc(1, stack);
             var bindingDescription = bindingDescriptions.get(0);
             bindingDescription.binding(0);
-            bindingDescription.stride(vertex.inputStride());
+            bindingDescription.stride(format.stride());
             bindingDescription.inputRate(VK_VERTEX_INPUT_RATE_VERTEX);
 
-            var inputAttributes = vertex.inputs();
-            var attributeDescriptions = VkVertexInputAttributeDescription.calloc(inputAttributes.size(), stack);
+            var attributeDescriptions = VkVertexInputAttributeDescription.calloc(inputs.size(), stack);
             int offset = 0;
-            for(var attribute : inputAttributes) {
+            for(var attribute : inputs) {
+                //noinspection resource
                 attributeDescriptions.get().set(
                     attribute.location(),
                     0,
-                    attribute.format(),
+                    format(attribute),
                     offset
                 );
                 offset += attribute.stride();
@@ -123,9 +125,9 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             }
             pipelineLayout = pointer.get(0);
 
-            var shaderInfo = VkPipelineShaderStageCreateInfo.calloc(shaders.size(), stack);
+            var shaderInfo = VkPipelineShaderStageCreateInfo.calloc(modules.size(), stack);
             var shaderMain = stack.UTF8("main");
-            for(var shader : shaders.values()) {
+            for(var shader : modules) {
                 //noinspection resource
                 shaderInfo.get().set(
                     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -162,6 +164,18 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             }
             handle = pointer.get(0);
         }
+    }
+
+    private int format(@NotNull VertexAttribute attribute) {
+        return switch(attribute.type()) {
+            case FLOAT -> switch(attribute.count()) {
+                case 1 -> VK_FORMAT_R32_SFLOAT;
+                case 2 -> VK_FORMAT_R32G32_SFLOAT;
+                case 3 -> VK_FORMAT_R32G32B32_SFLOAT;
+                case 4 -> VK_FORMAT_R32G32B32A32_SFLOAT;
+                default -> throw new RuntimeException("Unknown format for " + attribute.type().name().toLowerCase() + attribute.count());
+            };
+        };
     }
 
     public long handle() {

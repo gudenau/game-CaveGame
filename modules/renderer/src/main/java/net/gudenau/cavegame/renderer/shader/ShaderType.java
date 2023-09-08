@@ -1,10 +1,8 @@
-package net.gudenau.cavegame.renderer;
+package net.gudenau.cavegame.renderer.shader;
 
 import net.gudenau.cavegame.codec.Codec;
 import net.gudenau.cavegame.codec.CodecBuilder;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Locale;
 
 public enum ShaderType {
     FRAGMENT("frag"),

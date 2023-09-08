@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer.vk;
 
+import net.gudenau.cavegame.renderer.GraphicsBuffer;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
@@ -107,6 +108,12 @@ public final class VulkanCommandBuffer implements AutoCloseable {
 
     public void draw(int vertexCount, int instanceCount, int firstVertex, int firstInstance) {
         vkCmdDraw(handle, vertexCount, instanceCount, firstVertex, firstInstance);
+    }
+
+    public void bindVertexBuffer(VkGraphicsBuffer buffer) {
+        try(var stack = MemoryStack.stackPush()) {
+            vkCmdBindVertexBuffers(handle, 0, stack.longs(buffer.handle()), stack.longs(0));
+        }
     }
 
     public void submit(@NotNull VkQueue queue, @NotNull VulkanSemaphore imageSemaphore, @NotNull VulkanSemaphore finishedSemaphore, @NotNull VulkanFence fence) {

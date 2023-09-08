@@ -10,6 +10,8 @@ import static org.lwjgl.vulkan.VK10.*;
 
 public final class VulkanLogicalDevice implements AutoCloseable {
     @NotNull
+    private final VulkanPhysicalDevice device;
+    @NotNull
     private final VkDevice handle;
 
     @NotNull
@@ -17,7 +19,9 @@ public final class VulkanLogicalDevice implements AutoCloseable {
     @NotNull
     private final VkQueue presentQueue;
 
-    public VulkanLogicalDevice(@NotNull VulkanInstance instance, @NotNull VulkanPhysicalDevice physicalDevice) {
+    public VulkanLogicalDevice(@NotNull VulkanPhysicalDevice physicalDevice) {
+        this.device = physicalDevice;
+
         try(var stack = MemoryStack.stackPush()) {
             var queueSet = new IntOpenHashSet();
             queueSet.add(physicalDevice.graphicsQueue());
@@ -75,6 +79,10 @@ public final class VulkanLogicalDevice implements AutoCloseable {
     @NotNull
     public VkQueue presentQueue() {
         return presentQueue;
+    }
+
+    public VulkanPhysicalDevice device() {
+        return device;
     }
 
     @NotNull

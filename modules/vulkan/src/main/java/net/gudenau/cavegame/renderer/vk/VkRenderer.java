@@ -1,29 +1,21 @@
 package net.gudenau.cavegame.renderer.vk;
 
 import net.gudenau.cavegame.logger.Logger;
-import net.gudenau.cavegame.renderer.Renderer;
-import net.gudenau.cavegame.renderer.Shader;
-import net.gudenau.cavegame.renderer.ShaderMeta;
-import net.gudenau.cavegame.renderer.ShaderType;
+import net.gudenau.cavegame.renderer.*;
+import net.gudenau.cavegame.renderer.shader.Shader;
+import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
-import org.lwjgl.vulkan.VkVertexInputAttributeDescription;
-import org.lwjgl.vulkan.VkVertexInputBindingDescription;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static net.gudenau.cavegame.resource.Identifier.CAVEGAME_NAMESPACE;
 import static org.lwjgl.vulkan.KHRSwapchain.*;
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK10.VK_SUCCESS;
 
 public final class VkRenderer implements Renderer {
     private static final Logger LOGGER = Logger.forName("Vulkan");
@@ -57,6 +49,9 @@ public final class VkRenderer implements Renderer {
     @NotNull
     private final VulkanCommandPool commandPool;
     private final List<FrameState> frameState;
+    @Nullable
+    private FrameState currentFrameState;
+    private int currentImageIndex;
 
     private record FrameState(
         int index,
@@ -93,7 +88,7 @@ public final class VkRenderer implements Renderer {
             surface = new VulkanSurface(window, instance);
             physicalDevice = VulkanPhysicalDevice.pick(instance, surface, window);
             var extent = physicalDevice.surfaceExtent(stack);
-            logicalDevice = new VulkanLogicalDevice(instance, physicalDevice);
+            logicalDevice = new VulkanLogicalDevice(physicalDevice);
             swapchain = new VulkanSwapchain(physicalDevice, surface, logicalDevice, extent);
             imageViews = swapchain.stream()
                 .mapToObj((image) -> new VulkanImageView(logicalDevice, image, swapchain.imageFormat()))
@@ -108,16 +103,6 @@ public final class VkRenderer implements Renderer {
             frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
                 .mapToObj((index) -> new FrameState(index, logicalDevice, commandPool))
                 .toList();
-
-            /*
-            var shaderId = new Identifier(CAVEGAME_NAMESPACE, "basic");
-            try (
-                var vertexShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.VERTEX, shaderId);
-                var fragmentShader = new VulkanShaderModule(logicalDevice, VulkanShaderModule.Type.FRAGMENT, shaderId)
-            ) {
-                graphicsPipeline = new VulkanGraphicsPipeline(logicalDevice, extent, renderPass, vertexShader, fragmentShader);
-            }
-             */
         }
     }
 
@@ -163,31 +148,53 @@ public final class VkRenderer implements Renderer {
         instance.close();
     }
 
+
+
     @Override
-    public void draw() {
-        var frameState = this.frameState.get(currentFrame);
+    public void begin() {
+        currentFrameState = this.frameState.get(currentFrame);
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
-        var commandBuffer = frameState.commandBuffer();
-        var imageAvailableSemaphore = frameState.imageAvailableSemaphore();
-        var renderFinishedSemaphore = frameState.renderFinishedSemaphore();
-        var inFlightFence = frameState.inFlightFence();
+        var commandBuffer = currentFrameState.commandBuffer();
+        var imageAvailableSemaphore = currentFrameState.imageAvailableSemaphore();
+        var inFlightFence = currentFrameState.inFlightFence();
 
         int imageIndex = swapchain.acquireNextImage(imageAvailableSemaphore);
+        //TODO Fix this
         if(imageIndex == -1) {
             recreateSwapChain();
-            imageIndex = swapchain.acquireNextImage(imageAvailableSemaphore);
         }
+        currentImageIndex = imageIndex;
 
         inFlightFence.yield();
 
         commandBuffer.reset();
         commandBuffer.begin();
-        commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapchainFramebuffers.get(imageIndex));
-        //commandBuffer.bindPipeline(graphicsPipeline);
+    }
+
+    @Override
+    public void waitForIdle() {
+        logicalDevice.waitForIdle();
+    }
+
+    @Override
+    public void drawBuffer(@NotNull GraphicsBuffer buffer) {
+        var commandBuffer = currentFrameState.commandBuffer;
+        commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapchainFramebuffers.get(currentImageIndex));
+        commandBuffer.bindPipeline(((VkShader)buffer.shader()).pipeline());
         commandBuffer.setViewport(swapchain.extent().width(), swapchain.extent().height());
         commandBuffer.setScissor(0, 0, swapchain.extent().width(), swapchain.extent().height());
+        commandBuffer.bindVertexBuffer((VkGraphicsBuffer) buffer);
         commandBuffer.draw(3, 1, 0, 0);
+    }
+
+    @Override
+    public void draw() {
+        var commandBuffer = currentFrameState.commandBuffer();
+        var renderFinishedSemaphore = currentFrameState.renderFinishedSemaphore();
+        var imageAvailableSemaphore = currentFrameState.imageAvailableSemaphore();
+        var inFlightFence = currentFrameState.inFlightFence();
+
         commandBuffer.end();
         commandBuffer.submit(logicalDevice.graphicsQueue(), imageAvailableSemaphore, renderFinishedSemaphore, inFlightFence);
 
@@ -197,7 +204,7 @@ public final class VkRenderer implements Renderer {
             presentInfo.pWaitSemaphores(stack.longs(renderFinishedSemaphore.handle()));
             presentInfo.swapchainCount(1);
             presentInfo.pSwapchains(stack.longs(swapchain.handle()));
-            presentInfo.pImageIndices(stack.ints(imageIndex));
+            presentInfo.pImageIndices(stack.ints(currentImageIndex));
             var result = vkQueuePresentKHR(logicalDevice.presentQueue(), presentInfo);
             switch (result) {
                 case VK_SUCCESS -> {}
@@ -209,44 +216,67 @@ public final class VkRenderer implements Renderer {
                 recreateSwapChain();
             }
         }
+
+        currentFrameState = null;
+        currentImageIndex = -1;
     }
 
     @Override
-    public Optional<Shader> loadShader(@NotNull Identifier shader) {
-        Map<ShaderType, ShaderMeta> metadata;
+    public Shader loadShader(@NotNull Identifier shader) {
+        ShaderMeta metadata;
         {
             var result = ShaderMeta.load(shader);
             var partial = result.partial();
             if (partial.isPresent()) {
-                LOGGER.error("Failed to load shader metadata for " + shader + '\n' + partial.get().error());
-                return Optional.empty();
+                throw new RuntimeException("Failed to load shader metadata for " + shader + '\n' + partial.get().error());
             }
             metadata = result.getResult();
         }
 
-        var modules = metadata.entrySet().stream().map((entry) -> {
-                var key = entry.getKey();
-                var value = entry.getValue();
-                // public VulkanShaderModule(@NotNull VulkanLogicalDevice device, @NotNull Type type, @NotNull Identifier identifier) {
-                var type = switch (key) {
-                    case FRAGMENT -> VulkanShaderModule.Type.FRAGMENT;
-                    case VERTEX -> VulkanShaderModule.Type.VERTEX;
-                };
-                return new VulkanShaderModule(
-                    logicalDevice,
-                    type,
-                    value.files().get("vulkan").normalize("shader", '.' + key.extension())
-                );
-            })
-            .collect(Collectors.toUnmodifiableMap(VulkanShaderModule::type, Function.identity()));
+        var modules = new HashMap<VulkanShaderModule.Type, VulkanShaderModule>();
+        var required = new HashSet<>(VulkanShaderModule.Type.REQUIRED);
+        metadata.shaders().forEach((type, info) -> {
+            var vkType = switch(type) {
+                case VERTEX -> VulkanShaderModule.Type.VERTEX;
+                case FRAGMENT -> VulkanShaderModule.Type.FRAGMENT;
+            };
+            required.remove(vkType);
+            modules.put(vkType, new VulkanShaderModule(
+                logicalDevice,
+                vkType,
+                info.files().get("vulkan").normalize("shader", '.' + type.extension())
+            ));
+        });
+        if(!required.isEmpty()) {
+            throw new RuntimeException(
+                "Failed to load shader, required shaders where missing: " +
+                    required.stream()
+                        .map((missing) -> missing.name().toLowerCase())
+                        .collect(Collectors.joining(", "))
+            );
+        }
+
+        var vertex = modules.get(VulkanShaderModule.Type.VERTEX);
+        var vertexFormat = new VkVertexFormat(vertex, metadata.attributes());
 
         try(var stack = MemoryStack.stackPush()) {
-            return Optional.of(new VkShader(new VulkanGraphicsPipeline(
+            var pipeline = new VulkanGraphicsPipeline(
                 logicalDevice,
                 physicalDevice.surfaceExtent(stack),
                 renderPass,
-                modules
-            )));
+                modules.values(),
+                vertexFormat
+            );
+
+            return new VkShader(this, pipeline, vertexFormat);
+        } finally {
+            modules.values().forEach(VulkanShaderModule::close);
         }
+    }
+
+    @NotNull
+    @Override
+    public VkGraphicsBuffer createBuffer(@NotNull BufferType type, int size) {
+        return new VkGraphicsBuffer(logicalDevice, type, size);
     }
 }

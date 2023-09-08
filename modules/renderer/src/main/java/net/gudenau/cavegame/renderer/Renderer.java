@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer;
 
+import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,5 +11,14 @@ public interface Renderer extends AutoCloseable {
 
     void draw();
 
-    Optional<Shader> loadShader(@NotNull Identifier basic);
+    Shader loadShader(@NotNull Identifier basic);
+
+    @NotNull
+    GraphicsBuffer createBuffer(@NotNull BufferType type, int size);
+
+    void drawBuffer(@NotNull GraphicsBuffer buffer);
+
+    void begin();
+
+    void waitForIdle();
 }

@@ -1,4 +1,4 @@
-package net.gudenau.cavegame.renderer;
+package net.gudenau.cavegame.renderer.shader;
 
 import net.gudenau.cavegame.annotations.Required;
 import net.gudenau.cavegame.codec.Codec;
@@ -15,39 +15,38 @@ import java.util.Map;
 
 public record ShaderMeta(
     @NotNull Map<String, Attribute> attributes,
-    @NotNull Map<String, Identifier> files
+    @NotNull Map<ShaderType, Shader> shaders
 ) {
     public static final Codec<ShaderMeta> CODEC = CodecBuilder.<ShaderMeta>builder()
         .optional("attributes", Codec.map(Codec.STRING, Attribute.CODEC), ShaderMeta::attributes)
-        .required("files", Codec.map(Codec.STRING, Identifier.CODEC), ShaderMeta::files)
+        .required("shaders", Codec.map(ShaderType.CODEC, Shader.CODEC), ShaderMeta::shaders)
         .build(ShaderMeta.class);
-    public static final Codec<Map<ShaderType, ShaderMeta>> MAP_CODEC = Codec.map(ShaderType.CODEC, CODEC);
 
-    public ShaderMeta(@Nullable Map<String, Attribute> attributes, @NotNull Map<String, Identifier> files) {
+    public ShaderMeta(@Nullable Map<String, Attribute> attributes, @NotNull Map<ShaderType, Shader> shaders) {
         this.attributes = attributes == null ? Map.of() : attributes;
-        this.files = files;
+        this.shaders = shaders;
     }
 
-    public static CodecResult<Map<ShaderType, ShaderMeta>> load(@NotNull Identifier metadata) {
+    public static CodecResult<ShaderMeta> load(@NotNull Identifier metadata) {
         var normalized = metadata.normalize("shader", ".json");
         try(var reader = ResourceLoader.reader(normalized)) {
-            return JsonOps.decode(reader, MAP_CODEC);
+            return JsonOps.decode(reader, CODEC);
         } catch (IOException e) {
             return CodecResult.error("Failed to read metadata for " + metadata, e);
         }
     }
 
     public record Attribute(
-        @Required @NotNull Type type
+        @Required @NotNull AttributeUsage usage
     ) {
-        public enum Type {
-            POSITION,
-            COLOR,
-            ;
-
-            public static final Codec<Type> CODEC = CodecBuilder.ofEnum(Type.class);
-        }
-
         public static final Codec<Attribute> CODEC = CodecBuilder.record(Attribute.class);
+    }
+
+    public record Shader(
+        @NotNull Map<String, Identifier> files
+    ) {
+        public static final Codec<Shader> CODEC = CodecBuilder.<Shader>builder()
+            .required("files", Codec.map(Codec.STRING, Identifier.CODEC), Shader::files)
+            .build(Shader.class);
     }
 }

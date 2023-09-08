@@ -1,18 +1,14 @@
 package net.gudenau.cavegame.renderer.gl;
 
-import net.gudenau.cavegame.renderer.Renderer;
-import net.gudenau.cavegame.renderer.Shader;
-import net.gudenau.cavegame.renderer.Window;
+import net.gudenau.cavegame.renderer.*;
+import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import static org.lwjgl.opengl.GL44.*;
-import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class GlRenderer implements Renderer {
     @NotNull
@@ -62,7 +58,28 @@ public final class GlRenderer implements Renderer {
     }
 
     @Override
-    public Optional<Shader> loadShader(@NotNull Identifier basic) {
+    public Shader loadShader(@NotNull Identifier basic) {
+        throw new UnsupportedOperationException();
+    }
+
+    @NotNull
+    @Override
+    public GraphicsBuffer createBuffer(@NotNull BufferType type, int size) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void drawBuffer(@NotNull GraphicsBuffer buffer) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void begin() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void waitForIdle() {
         throw new UnsupportedOperationException();
     }
 

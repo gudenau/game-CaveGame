@@ -8,13 +8,8 @@ import net.gudenau.cavegame.renderer.RendererInfo;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
-import org.jetbrains.annotations.NotNull;
-import org.joml.Vector2f;
-import org.joml.Vector3f;
+import net.gudenau.cavegame.util.Closer;
 import org.lwjgl.system.Configuration;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class CaveGame {
     public static final String NAMESPACE = Identifier.CAVEGAME_NAMESPACE;
@@ -34,28 +29,6 @@ public final class CaveGame {
 
         GlfwUtils.handoverMain(CaveGame::newMain);
     }
-
-    private record Vertex(
-        @NotNull Vector2f pos,
-        @NotNull Vector3f color
-    ) {
-        private static List<Vertex> of(float @NotNull [] @NotNull [] values) {
-            var vertices = new ArrayList<Vertex>(values.length / 2);
-            for(int i = 0, length = values.length; i < length; i += 2) {
-                vertices.add(new Vertex(
-                    new Vector2f(values[i]),
-                    new Vector3f(values[i + 1])
-                ));
-            }
-            return List.copyOf(vertices);
-        }
-    }
-
-    private static final List<Vertex> vertices = Vertex.of(new float[][]{
-        { 0.0F, -0.5F}, {1.0F, 0.0F, 0.0F},
-        { 0.5F,  0.5F}, {0.0F, 1.0F, 0.0F},
-        {-0.5f,  0.5F}, {0.0F, 0.0F, 1.0F}
-    });
 
     private static void newMain() {
         ResourceLoader.registerProvider(NAMESPACE, ClassPathResourceProvider.of(CaveGame.class));
@@ -80,23 +53,39 @@ public final class CaveGame {
             .orElseThrow(() -> new IllegalArgumentException("Failed to find supported renderer " + Config.RENDERER.get()));
         LOGGER.info("Using " + rendererInfo.name());
 
-        try(
-            var window = rendererInfo.createWindow("CaveGame", 640, 480);
-            var renderer = rendererInfo.createRenderer(window);
-        ) {
+        try(var closer = new Closer()) {
+            var window = closer.add(rendererInfo.createWindow("CaveGame", 640, 480));
+            var renderer = closer.add(rendererInfo.createRenderer(window));
+
             window.bind();
 
-            var basicShader = renderer.loadShader(new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic"))
-                .orElseThrow(() -> new RuntimeException("Failed to load basic shader"));
+            var basicShader = closer.add(renderer.loadShader(new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic")));
+
+            var builder = basicShader.builder();
+            builder.position(+0.0F, -0.5F)
+                .color(1, 0, 0)
+                .next();
+            builder.position(+0.5F, +0.5F)
+                .color(0, 1, 0)
+                .next();
+            builder.position(-0.5F,  +0.5F)
+                .color(0, 0, 1)
+                .next();
+
+            var triangleBuffer = closer.add(builder.build());
 
             window.visible(true);
 
             do {
+                renderer.begin();
+                renderer.drawBuffer(triangleBuffer);
                 renderer.draw();
 
                 window.flip();
                 GlfwUtils.poll();
             } while(!window.closeRequested());
+
+            renderer.waitForIdle();
         }
 
 

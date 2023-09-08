@@ -3,6 +3,7 @@ package net.gudenau.cavegame.renderer.vk;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.gudenau.cavegame.logger.Logger;
+import net.gudenau.cavegame.renderer.shader.AttributeType;
 import net.gudenau.cavegame.util.BufferStreams;
 import net.gudenau.cavegame.util.collection.FastCollectors;
 import org.jetbrains.annotations.NotNull;
@@ -22,38 +23,6 @@ import static org.lwjgl.util.spvc.Spvc.*;
 import static org.lwjgl.vulkan.VK10.*;
 
 public final class ShaderReflection implements AutoCloseable {
-    public enum DataType {
-        FLOAT(SPVC_BASETYPE_FP32, new int[] {
-            VK_FORMAT_R32_SFLOAT, VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT
-        }),
-        ;
-
-        private final int id;
-        private final int[] formats;
-
-        DataType(int id, int[] formats) {
-            this.id = id;
-            this.formats = formats;
-        }
-
-        public int format(int size) {
-            return formats[size - 1];
-        }
-
-        private static final Int2ObjectMap<DataType> TYPES = Stream.of(values()).collect(FastCollectors.toInt2ObjectMap(
-            (element) -> element.id,
-            Function.identity()
-        ));
-
-        public static DataType valueOf(int vkType) {
-            var type = TYPES.get(vkType);
-            if(type == null) {
-                throw new AssertionError("Unknown type: " + vkType);
-            }
-            return type;
-        }
-    }
-
     public final class Resource {
         private final SpvcReflectedResource resource;
         private final long base;
@@ -72,8 +41,11 @@ public final class ShaderReflection implements AutoCloseable {
         }
 
         @NotNull
-        public DataType baseType() {
-            return DataType.valueOf(spvc_type_get_basetype(base));
+        public AttributeType baseType() {
+            return switch(spvc_type_get_basetype(base)) {
+                case SPVC_BASETYPE_FP32 -> AttributeType.FLOAT;
+                default -> throw new RuntimeException("Don't know how to handle a base type of " + spvc_type_get_basetype(base));
+            };
         }
 
         public int vectorSize() {
@@ -88,6 +60,7 @@ public final class ShaderReflection implements AutoCloseable {
     private static final Logger LOGGER = Logger.forName("SPVC");
 
     private final Int2ObjectMap<List<Resource>> resourceCache = new Int2ObjectOpenHashMap<>();
+    private static SpvcErrorCallback errorCallback;
     private final long context;
     final long compiler;
     private final long resources;
@@ -109,7 +82,7 @@ public final class ShaderReflection implements AutoCloseable {
             }
             context = contextPointer.get(0);
 
-            var errorCallback = SpvcErrorCallback.create((user, errorPointer) ->
+            errorCallback = SpvcErrorCallback.create((user, errorPointer) ->
                 LOGGER.error(MemoryUtil.memUTF8(errorPointer))
             );
             spvc_context_set_error_callback(context, errorCallback, NULL);
@@ -182,5 +155,6 @@ public final class ShaderReflection implements AutoCloseable {
     @Override
     public void close() {
         spvc_context_destroy(context);
+        errorCallback.close();
     }
 }

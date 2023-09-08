@@ -1,6 +1,6 @@
 package net.gudenau.cavegame.renderer.vk;
 
-import net.gudenau.cavegame.renderer.ShaderMeta;
+import net.gudenau.cavegame.renderer.shader.AttributeType;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
@@ -9,6 +9,9 @@ import org.lwjgl.vulkan.VkShaderModuleCreateInfo;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.lwjgl.util.shaderc.Shaderc.*;
 import static org.lwjgl.vulkan.VK10.*;
@@ -31,14 +34,10 @@ public final class VulkanShaderModule implements AutoCloseable {
     public record Attribute(
         @NotNull String name,
         int location,
-        ShaderReflection.DataType type,
+        AttributeType type,
         int size,
         int stride
-    ) {
-        public int format() {
-            return type.format(size);
-        }
-    }
+    ) {}
 
     public VulkanShaderModule(@NotNull VulkanLogicalDevice device, @NotNull Type type, @NotNull Identifier identifier) {
         this.device = device;
@@ -107,10 +106,6 @@ public final class VulkanShaderModule implements AutoCloseable {
         return inputs;
     }
 
-    public int inputStride() {
-        return inputStride;
-    }
-
     public List<Attribute> outputs() {
         return outputs;
     }
@@ -129,16 +124,22 @@ public final class VulkanShaderModule implements AutoCloseable {
     }
 
     public enum Type {
-        VERTEX(shaderc_vertex_shader, VK_SHADER_STAGE_VERTEX_BIT),
-        FRAGMENT(shaderc_fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT),
+        VERTEX(shaderc_vertex_shader, VK_SHADER_STAGE_VERTEX_BIT, true),
+        FRAGMENT(shaderc_fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT, true),
         ;
+
+        static final Set<Type> REQUIRED = Stream.of(values())
+            .filter((value) -> value.required)
+            .collect(Collectors.toUnmodifiableSet());
 
         private final int shadercType;
         final int vulkanType;
+        private final boolean required;
 
-        Type(int shadercType, int vulkanType) {
+        Type(int shadercType, int vulkanType, boolean required) {
             this.shadercType = shadercType;
             this.vulkanType = vulkanType;
+            this.required = required;
         }
     }
 }
