@@ -31,7 +31,7 @@ public final class PartialResult<T> {
 
     @NotNull
     public Optional<T> result() {
-        return Optional.of(result);
+        return Optional.ofNullable(result);
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
@@ -82,7 +82,7 @@ public final class PartialResult<T> {
     @Override
     public String toString() {
         return "PartialResult{" +
-            "result=" + result() +
+            "result=" + result +
             ", error=" + error() +
             '}';
     }

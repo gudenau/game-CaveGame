@@ -80,21 +80,21 @@ public final class CodecBuilderImpl<T> implements CodecBuilder<T> {
 
                             errors.add("Required argument \"" + name + "\" is missing");
                             state.fatalError = true;
-                        }
-
-                        var convertedValue = argument.codec.decode(operations, inputValue);
-                        if(convertedValue.hasResult()) {
-                            values.add(convertedValue.getResult());
-                            return;
-                        }
-
-                        var partial = convertedValue.getPartial();
-                        if(partial.hasResult()) {
-                            values.add(partial.getResult());
                         } else {
-                            state.fatalError = true;
+                            var convertedValue = argument.codec.decode(operations, inputValue);
+                            if(convertedValue.hasResult()) {
+                                values.add(convertedValue.getResult());
+                                return;
+                            }
+
+                            var partial = convertedValue.getPartial();
+                            if(partial.hasResult()) {
+                                values.add(partial.getResult());
+                            } else {
+                                state.fatalError = true;
+                            }
+                            errors.add(partial.error());
                         }
-                        errors.add(partial.error());
                     });
 
                     if(state.fatalError) {

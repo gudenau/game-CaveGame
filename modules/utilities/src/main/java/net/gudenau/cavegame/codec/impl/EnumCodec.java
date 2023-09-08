@@ -44,7 +44,7 @@ public final class EnumCodec<T extends Enum<T>> implements Codec<T> {
     public <R> CodecResult<T> decode(Operations<R> operations, R input) {
         return operations.toString(input).flatMap((name) -> {
             var value = values.get(name);
-            return value == null ? CodecResult.error(() -> name + " is not a " + name) : CodecResult.success(value);
+            return value == null ? CodecResult.error(() -> name + " is not a " + type.getSimpleName()) : CodecResult.success(value);
         });
     }
 
