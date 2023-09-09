@@ -6,7 +6,6 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
 import java.util.Collection;
-import java.util.List;
 
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.VK10.*;
@@ -34,7 +33,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 VK_DYNAMIC_STATE_SCISSOR
             ));
 
-            var inputs = format.attributes().values();
+            var inputs = format.attributes();
             var bindingDescriptions = VkVertexInputBindingDescription.calloc(1, stack);
             var bindingDescription = bindingDescriptions.get(0);
             bindingDescription.binding(0);

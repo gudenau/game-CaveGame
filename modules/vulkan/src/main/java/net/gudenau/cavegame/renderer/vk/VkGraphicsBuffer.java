@@ -3,6 +3,7 @@ package net.gudenau.cavegame.renderer.vk;
 import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.GraphicsBuffer;
 import net.gudenau.cavegame.renderer.shader.Shader;
+import net.gudenau.cavegame.util.Treachery;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
@@ -132,7 +133,7 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
             }
 
             try {
-                var buffer = bufferPointer.getByteBuffer(size);
+                var buffer = bufferPointer.getByteBuffer(0, size);
                 MemoryUtil.memCopy(data, buffer);
             } finally {
                 vkUnmapMemory(device.handle(), stagingMemory);

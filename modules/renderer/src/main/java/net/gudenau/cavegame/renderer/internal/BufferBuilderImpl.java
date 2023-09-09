@@ -49,15 +49,43 @@ public class BufferBuilderImpl implements BufferBuilder {
         }
     }
 
-    private record Vertex(@Nullable Data position, @Nullable Data color) {
-        public int put(int offset, ByteBuffer buffer) {
+    private final class Vertex {
+        private final @Nullable Data position;
+        private final @Nullable Data color;
+
+        private Vertex(@Nullable Data position, @Nullable Data color) {
+            this.position = position;
+            this.color = color;
+        }
+
+        public void put(int offset, ByteBuffer buffer) {
             if(position != null) {
-                offset = position.put(offset, buffer);
+                position.put(positionOffset + offset, buffer);
             }
             if(color != null) {
-                offset = color.put(offset, buffer);
+                color.put(colorOffset + offset, buffer);
             }
-            return offset;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if(obj == this) return true;
+            if(obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (Vertex) obj;
+            return Objects.equals(this.position, that.position) &&
+                Objects.equals(this.color, that.color);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(position, color);
+        }
+
+        @Override
+        public String toString() {
+            return "Vertex[" +
+                "position=" + position + ", " +
+                "color=" + color + ']';
         }
     }
 
@@ -155,7 +183,9 @@ public class BufferBuilderImpl implements BufferBuilder {
             vertices.object2IntEntrySet().stream()
                 .sorted(Comparator.comparingInt(Object2IntMap.Entry::getIntValue))
                 .forEachOrdered((entry) -> {
-                    vertexBuffer.position(entry.getKey().put(vertexBuffer.position(), vertexBuffer));
+                    var offset = vertexBuffer.position();
+                    entry.getKey().put(offset, vertexBuffer);
+                    vertexBuffer.position(offset + stride);
                 });
             vertexBuffer.position(0);
 

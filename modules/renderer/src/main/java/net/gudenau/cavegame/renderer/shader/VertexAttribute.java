@@ -8,5 +8,6 @@ public interface VertexAttribute {
     int count();
     int stride();
     int location();
+    @NotNull AttributeUsage usage();
     int offset();
 }

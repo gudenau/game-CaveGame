@@ -9,17 +9,13 @@ import java.util.OptionalInt;
 
 public interface VertexFormat {
     @NotNull
-    Map<@NotNull AttributeUsage, @NotNull VertexAttribute> attributes();
+    List<@NotNull VertexAttribute> attributes();
 
     @NotNull
-    default Optional<VertexAttribute> color() {
-        return Optional.ofNullable(attributes().get(AttributeUsage.COLOR));
-    }
+    Optional<VertexAttribute> color();
 
     @NotNull
-    default Optional<VertexAttribute> position() {
-        return Optional.ofNullable(attributes().get(AttributeUsage.POSITION));
-    }
+    Optional<VertexAttribute> position();
 
     int stride();
 }

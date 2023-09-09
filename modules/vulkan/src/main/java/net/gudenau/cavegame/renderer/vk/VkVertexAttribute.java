@@ -1,6 +1,7 @@
 package net.gudenau.cavegame.renderer.vk;
 
 import net.gudenau.cavegame.renderer.shader.AttributeType;
+import net.gudenau.cavegame.renderer.shader.AttributeUsage;
 import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.renderer.shader.VertexAttribute;
 import org.jetbrains.annotations.NotNull;
@@ -11,6 +12,7 @@ public record VkVertexAttribute(
     int count,
     int stride,
     int location,
+    @NotNull AttributeUsage usage,
     int offset
 ) implements VertexAttribute {
     public VkVertexAttribute(VulkanShaderModule.Attribute input, ShaderMeta.Attribute meta, int offset) {
@@ -20,6 +22,7 @@ public record VkVertexAttribute(
             input.size(),
             input.stride(),
             input.location(),
+            meta.usage(),
             offset
         );
     }

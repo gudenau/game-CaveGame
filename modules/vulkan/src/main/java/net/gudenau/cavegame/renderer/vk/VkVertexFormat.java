@@ -11,52 +11,71 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class VkVertexFormat implements VertexFormat {
-    private final Map<AttributeUsage, VertexAttribute> attributes;
+    private final List<VertexAttribute> attributes;
     private final int stride;
+    private final VertexAttribute color;
+    private final VertexAttribute position;
 
     public VkVertexFormat(@NotNull VulkanShaderModule vertex, @NotNull Map<String, ShaderMeta.Attribute> metadata) {
-        var inputs = vertex.inputs().stream().collect(Collectors.toUnmodifiableMap(
-            VulkanShaderModule.Attribute::name,
-            Function.identity()
-        ));
-        Set<String> missing = new HashSet<>(inputs.keySet());
-        Set<String> extra = new HashSet<>();
+        Set<String> missing = new HashSet<>();
 
-        Map<AttributeUsage, VertexAttribute> attributes = new HashMap<>();
+        List<VertexAttribute> attributes = new ArrayList<>();
         int offset = 0;
-        for(var entry : metadata.entrySet()) {
-            var name = entry.getKey();
-            var meta = entry.getValue();
-            if(!missing.remove(name)) {
-                extra.add(name);
+
+        VertexAttribute color = null;
+        VertexAttribute position = null;
+
+        var inputs = new ArrayList<>(vertex.inputs());
+        inputs.sort(Comparator.comparingInt(VulkanShaderModule.Attribute::location));
+        for(var input : vertex.inputs()) {
+            var name = input.name();
+            var meta = metadata.get(name);
+            if(meta == null) {
+                missing.add(name);
                 continue;
             }
-            var input = inputs.get(name);
 
             var attribute = new VkVertexAttribute(input, meta, offset);
             offset += attribute.stride();
-            attributes.put(meta.usage(), attribute);
+            attributes.add(attribute);
+            switch(attribute.usage()) {
+                case COLOR -> color = attribute;
+                case POSITION -> position = attribute;
+            }
         }
 
-        if(!missing.isEmpty() || !extra.isEmpty()) {
+        this.color = color;
+        this.position = position;
+
+        if(!missing.isEmpty()) {
             throw new RuntimeException(
                 "Bad shader metadata, missing attributes: " +
-                    String.join(", ", missing) +
-                    "; extra attributes: " +
-                    String.join(", ", extra)
+                    String.join(", ", missing)
             );
         }
 
-        this.attributes = Collections.unmodifiableMap(attributes);
-        this.stride = attributes.values().stream()
+        this.attributes = Collections.unmodifiableList(attributes);
+        this.stride = attributes.stream()
             .mapToInt(VertexAttribute::stride)
             .sum();
     }
 
     @Override
     @NotNull
-    public Map<AttributeUsage, VertexAttribute> attributes() {
+    public List<VertexAttribute> attributes() {
         return attributes;
+    }
+
+    @Override
+    @NotNull
+    public Optional<VertexAttribute> color() {
+        return Optional.of(color);
+    }
+
+    @Override
+    @NotNull
+    public Optional<VertexAttribute> position() {
+        return Optional.of(position);
     }
 
     @Override
