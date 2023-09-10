@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer.shader;
 
+import net.gudenau.cavegame.annotations.Optional;
 import net.gudenau.cavegame.annotations.Required;
 import net.gudenau.cavegame.codec.Codec;
 import net.gudenau.cavegame.codec.CodecBuilder;
@@ -15,15 +16,22 @@ import java.util.Map;
 
 public record ShaderMeta(
     @NotNull Map<String, Attribute> attributes,
+    @NotNull Map<String, Uniform> uniforms,
     @NotNull Map<ShaderType, Shader> shaders
 ) {
     public static final Codec<ShaderMeta> CODEC = CodecBuilder.<ShaderMeta>builder()
         .optional("attributes", Codec.map(Codec.STRING, Attribute.CODEC), ShaderMeta::attributes)
+        .optional("uniforms", Codec.map(Codec.STRING, Uniform.CODEC), ShaderMeta::uniforms)
         .required("shaders", Codec.map(ShaderType.CODEC, Shader.CODEC), ShaderMeta::shaders)
         .build(ShaderMeta.class);
 
-    public ShaderMeta(@Nullable Map<String, Attribute> attributes, @NotNull Map<ShaderType, Shader> shaders) {
+    public ShaderMeta(
+        @Nullable Map<String, Attribute> attributes,
+        @Nullable Map<String, Uniform> uniforms,
+        @NotNull Map<ShaderType, Shader> shaders
+    ) {
         this.attributes = attributes == null ? Map.of() : attributes;
+        this.uniforms = uniforms == null ? Map.of() : uniforms;
         this.shaders = shaders;
     }
 
@@ -37,9 +45,16 @@ public record ShaderMeta(
     }
 
     public record Attribute(
-        @Required @NotNull AttributeUsage usage
+        @Optional @Nullable AttributeUsage usage
     ) {
         public static final Codec<Attribute> CODEC = CodecBuilder.record(Attribute.class);
+    }
+
+    public record Uniform(
+        @Optional @Nullable UniformUsage usage,
+        @Required @NotNull ShaderType shader
+    ) {
+        public static final Codec<Uniform> CODEC = CodecBuilder.record(Uniform.class);
     }
 
     public record Shader(

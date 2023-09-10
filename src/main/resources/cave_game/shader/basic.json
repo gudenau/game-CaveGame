@@ -7,6 +7,12 @@
       "usage": "color"
     }
   },
+  "uniforms": {
+    "ubo": {
+      "shader": "vertex",
+      "usage": "ubo"
+    }
+  },
   "shaders": {
     "vertex": {
       "files": {

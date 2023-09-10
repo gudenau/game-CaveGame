@@ -13,6 +13,8 @@ import org.lwjgl.util.spvc.SpvcErrorCallback;
 import org.lwjgl.util.spvc.SpvcReflectedResource;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -32,8 +34,13 @@ public final class ShaderReflection implements AutoCloseable {
             base = spvc_compiler_get_type_handle(compiler, resource.type_id());
         }
 
+        private Resource(int id) {
+            this.resource = null;
+            base = spvc_compiler_get_type_handle(compiler, id);
+        }
+
         public String name() {
-            return resource.nameString();
+            return spvc_compiler_get_name(compiler, resource.id());
         }
 
         public int location() {
@@ -44,6 +51,7 @@ public final class ShaderReflection implements AutoCloseable {
         public AttributeType baseType() {
             return switch(spvc_type_get_basetype(base)) {
                 case SPVC_BASETYPE_FP32 -> AttributeType.FLOAT;
+                case SPVC_BASETYPE_STRUCT -> AttributeType.STRUCT;
                 default -> throw new RuntimeException("Don't know how to handle a base type of " + spvc_type_get_basetype(base));
             };
         }
@@ -54,6 +62,16 @@ public final class ShaderReflection implements AutoCloseable {
 
         public int size() {
             return (spvc_type_get_bit_width(base) >> 3) * vectorSize();
+        }
+
+        public List<Resource> members() {
+            var memberCount = spvc_type_get_num_member_types(base);
+            List<Resource> members = new ArrayList<>(memberCount);
+            for(int i = 0; i < memberCount; i++) {
+                var id = spvc_type_get_member_type(base, i);
+                members.add(new Resource(id));
+            }
+            return Collections.unmodifiableList(members);
         }
     }
 

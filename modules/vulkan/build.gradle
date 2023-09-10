@@ -3,6 +3,8 @@ apply from: rootProject.projectDir.toPath().resolve(java.nio.file.Path.of('scrip
 dependencies {
     implementation "it.unimi.dsi:fastutil:${project.fastutilVersion}"
 
+    implementation "org.joml:joml:${jomlVersion}"
+
     implementation 'org.lwjgl:lwjgl'
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
 

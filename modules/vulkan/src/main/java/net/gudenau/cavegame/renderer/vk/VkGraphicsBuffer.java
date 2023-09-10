@@ -18,6 +18,7 @@ import static org.lwjgl.vulkan.VK10.*;
 public class VkGraphicsBuffer implements GraphicsBuffer {
     private final VulkanLogicalDevice device;
     private final VulkanCommandPool commandPool;
+    private final boolean empherial;
     private final int size;
 
     private final long handle;
@@ -28,6 +29,7 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
     VkGraphicsBuffer(@NotNull VulkanLogicalDevice device, @NotNull VulkanCommandPool commandPool, @NotNull BufferType type, int size) {
         this.device = device;
         this.commandPool = commandPool;
+        this.empherial = type == BufferType.UNIFORM;
         this.size = size;
 
         try(var stack = MemoryStack.stackPush()) {
@@ -37,8 +39,10 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
                 switch(type) {
                     case VERTEX -> VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
                     case INDEX -> VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                    case UNIFORM -> VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
                 } | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                empherial ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT :
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 handlePointer,
                 memoryPointer
             );
@@ -113,6 +117,34 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
 
     @Override
     public void upload(@NotNull ByteBuffer data) {
+        if(empherial) {
+            doEmpherialUpload(data);
+        } else {
+            doUpload(data);
+        }
+    }
+
+    private ByteBuffer mapBuffer(int size, long handle) {
+        try(var stack = MemoryStack.stackPush()) {
+            var bufferPointer = stack.pointers(0);
+            var result = vkMapMemory(device.handle(), handle, 0, size, 0, bufferPointer);
+            if(result != VK_SUCCESS) {
+                throw new RuntimeException("Failed to map Vulkan memory: " + VulkanUtils.errorString(result));
+            }
+            return bufferPointer.getByteBuffer(0, size);
+        }
+    }
+
+    private void doEmpherialUpload(ByteBuffer data) {
+        var buffer = mapBuffer(Math.min(data.remaining(), this.size), memory);
+        try {
+            MemoryUtil.memCopy(data, buffer);
+        } finally {
+            vkUnmapMemory(device.handle(), memory);
+        }
+    }
+
+    private void doUpload(ByteBuffer data) {
         try(var stack = MemoryStack.stackPush()) {
             var stagingPointer = stack.longs(0);
             var stagingMemoryPointer = stack.longs(0);
@@ -125,15 +157,8 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
             var staging = stagingPointer.get(0);
             var stagingMemory = stagingMemoryPointer.get(0);
 
-            var size = Math.min(data.remaining(), this.size);
-            var bufferPointer = stack.pointers(0);
-            var result = vkMapMemory(device.handle(), stagingMemory, 0, size, 0, bufferPointer);
-            if(result != VK_SUCCESS) {
-                throw new RuntimeException("Failed to map Vulkan memory: " + VulkanUtils.errorString(result));
-            }
-
+            var buffer = mapBuffer(Math.min(data.remaining(), this.size), stagingMemory);
             try {
-                var buffer = bufferPointer.getByteBuffer(0, size);
                 MemoryUtil.memCopy(data, buffer);
             } finally {
                 vkUnmapMemory(device.handle(), stagingMemory);

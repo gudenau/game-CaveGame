@@ -7,6 +7,8 @@ import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 
@@ -40,10 +42,6 @@ public final class VkRenderer implements Renderer {
     private List<@NotNull VulkanImageView> imageViews;
     @NotNull
     private final VulkanRenderPass renderPass;
-    /*
-    @NotNull
-    private final VulkanGraphicsPipeline graphicsPipeline;
-     */
     @NotNull
     private List<@NotNull VulkanFramebuffer> swapchainFramebuffers;
     @NotNull
@@ -58,25 +56,28 @@ public final class VkRenderer implements Renderer {
         @NotNull VulkanCommandBuffer commandBuffer,
         @NotNull VulkanSemaphore imageAvailableSemaphore,
         @NotNull VulkanSemaphore renderFinishedSemaphore,
-        @NotNull VulkanFence inFlightFence
+        @NotNull VulkanFence inFlightFence,
+        @NotNull GraphicsBuffer uniformBuffer
     ) implements AutoCloseable {
-        private FrameState(int index, @NotNull VulkanLogicalDevice device, @NotNull VulkanCommandPool commandPool) {
-            this(
-                index,
-                new VulkanCommandBuffer(device, commandPool),
-                new VulkanSemaphore(device),
-                new VulkanSemaphore(device),
-                new VulkanFence(device)
-            );
-        }
-
         @Override
         public void close() {
+            uniformBuffer.close();
             commandBuffer.close();
             imageAvailableSemaphore.close();
             renderFinishedSemaphore.close();
             inFlightFence.close();
         }
+    }
+
+    private FrameState createFrameState(int index, @NotNull VulkanLogicalDevice device, @NotNull VulkanCommandPool commandPool) {
+        return new FrameState(
+            index,
+            new VulkanCommandBuffer(device, commandPool),
+            new VulkanSemaphore(device),
+            new VulkanSemaphore(device),
+            new VulkanFence(device),
+            createBuffer(BufferType.UNIFORM, Float.BYTES * 4 * 4 * 3)
+        );
     }
 
     public VkRenderer(@NotNull VkWindow window) {
@@ -101,7 +102,7 @@ public final class VkRenderer implements Renderer {
             commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
 
             frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
-                .mapToObj((index) -> new FrameState(index, logicalDevice, commandPool))
+                .mapToObj((index) -> createFrameState(index, logicalDevice, commandPool))
                 .toList();
         }
     }
@@ -166,10 +167,42 @@ public final class VkRenderer implements Renderer {
         }
         currentImageIndex = imageIndex;
 
+        updateUniforms();
+
         inFlightFence.yield();
 
         commandBuffer.reset();
         commandBuffer.begin();
+    }
+
+    private long startTime = System.nanoTime();
+    private void updateUniforms() {
+        var currentTime = System.nanoTime();
+        var delta = (float)((currentTime - startTime) / 10000000000D);
+
+        var ubo = new UniformBufferObject();
+        ubo.model().rotate(
+            (float) (delta * Math.toRadians(90)),
+            new Vector3f(0, 0, 1)
+        );
+        ubo.view().lookAt(
+            new Vector3f(2, 2, 2),
+            new Vector3f(0, 0, 0),
+            new Vector3f(0, 0, 1)
+        );
+        ubo.proj().perspective(
+            (float) Math.toRadians(45),
+            swapchain.extent().width() / (float) swapchain.extent().height(),
+            0.1F,
+            10.0F,
+            true
+        );
+
+        try(var stack = MemoryStack.stackPush()) {
+            var buffer = stack.calloc(Float.BYTES * 4 * 4 * 3);
+            ubo.write(buffer);
+            currentFrameState.uniformBuffer.upload(buffer);
+        }
     }
 
     @Override
@@ -262,6 +295,7 @@ public final class VkRenderer implements Renderer {
         }
 
         var vertex = modules.get(VulkanShaderModule.Type.VERTEX);
+        var uniforms = new VkUniformLayout(vertex, metadata.uniforms());
         var vertexFormat = new VkVertexFormat(vertex, metadata.attributes());
 
         try(var stack = MemoryStack.stackPush()) {
@@ -270,7 +304,8 @@ public final class VkRenderer implements Renderer {
                 physicalDevice.surfaceExtent(stack),
                 renderPass,
                 modules.values(),
-                vertexFormat
+                vertexFormat,
+                uniforms
             );
 
             return new VkShader(this, pipeline, vertexFormat);

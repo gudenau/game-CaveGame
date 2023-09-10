@@ -1,14 +1,11 @@
 package net.gudenau.cavegame.renderer.vk;
 
-import net.gudenau.cavegame.renderer.shader.AttributeUsage;
 import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.renderer.shader.VertexAttribute;
 import net.gudenau.cavegame.renderer.shader.VertexFormat;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public final class VkVertexFormat implements VertexFormat {
     private final List<VertexAttribute> attributes;
@@ -26,7 +23,7 @@ public final class VkVertexFormat implements VertexFormat {
         VertexAttribute position = null;
 
         var inputs = new ArrayList<>(vertex.inputs());
-        inputs.sort(Comparator.comparingInt(VulkanShaderModule.Attribute::location));
+        inputs.sort(Comparator.comparingInt(VulkanShaderModule.Resource::location));
         for(var input : vertex.inputs()) {
             var name = input.name();
             var meta = metadata.get(name);
@@ -38,9 +35,12 @@ public final class VkVertexFormat implements VertexFormat {
             var attribute = new VkVertexAttribute(input, meta, offset);
             offset += attribute.stride();
             attributes.add(attribute);
-            switch(attribute.usage()) {
-                case COLOR -> color = attribute;
-                case POSITION -> position = attribute;
+            var usage = attribute.usage();
+            if(usage != null) {
+                switch(usage) {
+                    case COLOR -> color = attribute;
+                    case POSITION -> position = attribute;
+                }
             }
         }
 

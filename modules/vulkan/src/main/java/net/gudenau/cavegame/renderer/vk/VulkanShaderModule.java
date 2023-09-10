@@ -24,20 +24,48 @@ public final class VulkanShaderModule implements AutoCloseable {
     private final long handle;
 
     @NotNull
-    private final List<Attribute> inputs;
+    private final List<Resource> inputs;
     @NotNull
-    private final List<Attribute> outputs;
+    private final List<Resource> outputs;
+    @NotNull
+    private final List<Resource> uniforms;
 
     private final int inputStride;
     private final int outputStride;
 
-    public record Attribute(
+    public record Resource(
         @NotNull String name,
         int location,
         AttributeType type,
         int size,
         int stride
-    ) {}
+    ) {
+        private static Resource of(ShaderReflection.Resource resource) {
+            return switch(resource.baseType()) {
+                case STRUCT -> {
+                    int bytes = 0;
+                    for(var member : resource.members()) {
+                        bytes += member.size();
+                    }
+
+                    yield new Resource(
+                        resource.name(),
+                        resource.location(),
+                        resource.baseType(),
+                        -1,
+                        bytes
+                    );
+                }
+                default -> new Resource(
+                    resource.name(),
+                    resource.location(),
+                    resource.baseType(),
+                    resource.vectorSize(),
+                    resource.size()
+                );
+            };
+        }
+    }
 
     public VulkanShaderModule(@NotNull VulkanLogicalDevice device, @NotNull Type type, @NotNull Identifier identifier) {
         this.device = device;
@@ -53,32 +81,24 @@ public final class VulkanShaderModule implements AutoCloseable {
 
         try(var reflection = ShaderReflection.acquire(code)) {
             inputs = reflection.inputs().stream()
-                .map((attribute) -> new Attribute(
-                    attribute.name(),
-                    attribute.location(),
-                    attribute.baseType(),
-                    attribute.vectorSize(),
-                    attribute.size()
-                ))
+                .map(Resource::of)
                 .toList();
 
             outputs = reflection.outputs().stream()
-                .map((attribute) -> new Attribute(
-                    attribute.name(),
-                    attribute.location(),
-                    attribute.baseType(),
-                    attribute.vectorSize(),
-                    attribute.size()
-                ))
+                .map(Resource::of)
+                .toList();
+
+            uniforms = reflection.uniforms().stream()
+                .map(Resource::of)
                 .toList();
         }
 
         inputStride = inputs.stream()
-            .mapToInt(Attribute::stride)
+            .mapToInt(Resource::stride)
             .sum();
 
         outputStride = outputs.stream()
-            .mapToInt(Attribute::stride)
+            .mapToInt(Resource::stride)
             .sum();
 
         try(var stack = MemoryStack.stackPush()) {
@@ -102,12 +122,16 @@ public final class VulkanShaderModule implements AutoCloseable {
         return type;
     }
 
-    public List<Attribute> inputs() {
+    public List<Resource> inputs() {
         return inputs;
     }
 
-    public List<Attribute> outputs() {
+    public List<Resource> outputs() {
         return outputs;
+    }
+
+    public List<Resource> uniforms() {
+        return uniforms;
     }
 
     public int outputStride() {

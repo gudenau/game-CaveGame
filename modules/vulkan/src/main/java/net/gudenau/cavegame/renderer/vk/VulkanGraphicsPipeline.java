@@ -15,13 +15,16 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
     private final VulkanLogicalDevice device;
     private final long pipelineLayout;
     private final long handle;
+    private final long descriptorSetLayout;
 
+    //TODO Cache stuff
     public VulkanGraphicsPipeline(
         @NotNull VulkanLogicalDevice device,
         @NotNull VkExtent2D viewportExtent,
         @NotNull VulkanRenderPass renderPass,
         @NotNull Collection<VulkanShaderModule> modules,
-        @NotNull VkVertexFormat format
+        @NotNull VkVertexFormat format,
+        @NotNull VkUniformLayout uniforms
     ) {
         this.device = device;
 
@@ -112,13 +115,36 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             colorBlending.logicOpEnable(false);
             colorBlending.pAttachments(colorBlendAttachment);
 
+            var layoutBindings = VkDescriptorSetLayoutBinding.calloc(uniforms.uniforms().size(), stack);
+            for(int i = 0; i < uniforms.uniforms().size(); i++) {
+                var uniform = uniforms.uniforms().get(i);
+                var binding = layoutBindings.get(i);
+                binding.binding(uniform.location());
+                binding.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+                binding.descriptorCount(1);
+                binding.stageFlags(switch(uniform.shader()) {
+                    case FRAGMENT -> VK_SHADER_STAGE_FRAGMENT_BIT;
+                    case VERTEX -> VK_SHADER_STAGE_VERTEX_BIT;
+                });
+            }
+
+            var layoutInfo = VkDescriptorSetLayoutCreateInfo.calloc(stack);
+            layoutInfo.sType$Default();
+            layoutInfo.pBindings(layoutBindings);
+            var descriptorSetLayoutPointer = stack.longs(0);
+            var result = vkCreateDescriptorSetLayout(device.handle(), layoutInfo, VulkanAllocator.get(), descriptorSetLayoutPointer);
+            if(result != VK_SUCCESS) {
+                throw new RuntimeException("Failed to create Vulkan descriptor set layout: " + VulkanUtils.errorString(result));
+            }
+            descriptorSetLayout = descriptorSetLayoutPointer.get(0);
+
             var pilelineLayoutInfo = VkPipelineLayoutCreateInfo.calloc(stack);
             pilelineLayoutInfo.sType$Default();
-            pilelineLayoutInfo.pSetLayouts(null);
+            pilelineLayoutInfo.pSetLayouts(descriptorSetLayoutPointer);
             pilelineLayoutInfo.pPushConstantRanges(null);
 
             var pointer = stack.longs(0);
-            var result = vkCreatePipelineLayout(device.handle(), pilelineLayoutInfo, VulkanAllocator.get(), pointer);
+            result = vkCreatePipelineLayout(device.handle(), pilelineLayoutInfo, VulkanAllocator.get(), pointer);
             if(result != VK_SUCCESS) {
                 throw new RuntimeException("Failed to create Vulkan pipeline layout: " + VulkanUtils.errorString(result));
             }
@@ -174,6 +200,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 case 4 -> VK_FORMAT_R32G32B32A32_SFLOAT;
                 default -> throw new RuntimeException("Unknown format for " + attribute.type().name().toLowerCase() + attribute.count());
             };
+            case STRUCT -> throw new RuntimeException("Struct is not yet supported");
         };
     }
 
@@ -184,6 +211,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
     @Override
     public void close() {
         vkDestroyPipeline(device.handle(), handle, VulkanAllocator.get());
+        vkDestroyDescriptorSetLayout(device.handle(), descriptorSetLayout, VulkanAllocator.get());
         vkDestroyPipelineLayout(device.handle(), pipelineLayout, VulkanAllocator.get());
     }
 }

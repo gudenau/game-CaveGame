@@ -10,6 +10,8 @@ module net.gudenau.cavegame.renderer {
 
     requires it.unimi.dsi.fastutil;
 
+    requires org.joml;
+
     requires org.lwjgl;
     requires org.lwjgl.glfw;
 
