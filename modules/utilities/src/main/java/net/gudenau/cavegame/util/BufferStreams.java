@@ -43,12 +43,12 @@ public final class BufferStreams {
     }
 
     @NotNull
-    public static <B extends Struct, T extends StructBuffer<B, T>> Stream<B> structureStream(@NotNull T buffer) {
+    public static <B extends Struct<B>, T extends StructBuffer<B, T>> Stream<B> structureStream(@NotNull T buffer) {
         return StreamSupport.stream(structureSpliterator(buffer), false);
     }
 
     @NotNull
-    public static <B extends Struct, T extends StructBuffer<B, T>> Spliterator<B> structureSpliterator(@NotNull T buffer) {
+    public static <B extends Struct<B>, T extends StructBuffer<B, T>> Spliterator<B> structureSpliterator(@NotNull T buffer) {
         return new AbstractSpliterator<>(buffer.remaining(), 0){
             private final int limit = buffer.limit();
             private int index = buffer.position();
