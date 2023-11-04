@@ -1,10 +1,12 @@
 package net.gudenau.cavegame.renderer;
 
+import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.logger.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.Platform;
 
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
@@ -34,6 +36,12 @@ public final class GlfwUtils {
         glfwThread.setName("GLFW Worker");
         if(glfwThread.threadId() != 1) {
             throw new IllegalStateException("GLFW can't be handed over outside of the original main thread!");
+        }
+
+        if(Platform.get() == Platform.LINUX && !Config.FORCE_X.get()) {
+            if(glfwPlatformSupported(GLFW_PLATFORM_WAYLAND)) {
+                glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
+            }
         }
 
         if(!glfwInit()) {

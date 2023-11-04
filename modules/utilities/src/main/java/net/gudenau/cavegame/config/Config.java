@@ -2,8 +2,10 @@ package net.gudenau.cavegame.config;
 
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.system.Platform;
 
 import java.util.*;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 /**
@@ -12,6 +14,8 @@ import java.util.function.Function;
  * @param <T> The type of this configuration value
  */
 public final class Config<T> {
+    private static final BooleanSupplier TRUE = () -> Boolean.TRUE;
+
     /**
      * All known configuration values.
      */
@@ -21,29 +25,36 @@ public final class Config<T> {
      * Enable debug mode, this causes native memory allocations to be checked as well as more checks in various
      * libraries and code paths to be run. This may cause performance degradation.
      */
-    public static final Config<Boolean> DEBUG = bool("debug", false);
+    public static final Config<Boolean> DEBUG = bool("debug", false, TRUE);
 
     /**
      * Sets the maximum native buffer size used for reading files. Setting this too small will prevent assets from being
      * loaded, setting it to large may allow for DoS.
      */
-    public static final Config<Integer> MAX_BUFFER_SIZE = integer("max_buffer_size", 0x10000000);
+    public static final Config<Integer> MAX_BUFFER_SIZE = integer("max_buffer_size", 0x10000000, TRUE);
 
     /**
      * The global log level of this program.
      */
-    public static final Config<String> LOG_LEVEL = string("log_level", "debug"); // TODO Enums?
+    public static final Config<String> LOG_LEVEL = string("log_level", "debug", TRUE); // TODO Enums?
 
-    public static final Config<String> RENDERER = string("renderer", "CaveGameVk");
+    public static final Config<String> RENDERER = string("renderer", "CaveGameVk", TRUE);
+
+    /**
+     * A flag to force the use of X on Linux systems that have Wayland installed.
+     */
+    public static final Config<Boolean> FORCE_X = bool("force_x", false, () -> Platform.get() == Platform.LINUX);
 
     static {
         // Check system props for any matching values
-        CONFIGURATION.forEach((config) -> {
-            var prop = System.getProperty("cavegame." + config.name);
-            if(prop != null) {
-                config.deserialize(prop);
-            }
-        });
+        CONFIGURATION.stream()
+            .filter(Config::supported)
+            .forEachOrdered((config) -> {
+                var prop = System.getProperty("cavegame." + config.name);
+                if(prop != null) {
+                    config.deserialize(prop);
+                }
+            });
     }
 
     /**
@@ -75,10 +86,12 @@ public final class Config<T> {
                 values.put(arg, args[++i]);
             }
         }
-        CONFIGURATION.forEach((config) ->
-            Optional.ofNullable(values.get(config.name))
-                .ifPresent(config::deserialize)
-        );
+        CONFIGURATION.stream()
+            .filter(Config::supported)
+            .forEach((config) ->
+                Optional.ofNullable(values.get(config.name))
+                    .ifPresent(config::deserialize)
+            );
     }
 
     /**
@@ -86,11 +99,12 @@ public final class Config<T> {
      *
      * @param name The name of the configuration value
      * @param value The default value
+     * @param supported True if this config option should be exposed
      * @return The created configuration value
      */
-    @Contract("_, _ -> new")
-    private static Config<Boolean> bool(String name, boolean value) {
-        return new Config<>(name, value, Boolean::valueOf);
+    @Contract("_, _, _ -> new")
+    private static Config<Boolean> bool(String name, boolean value, BooleanSupplier supported) {
+        return new Config<>(name, value, Boolean::valueOf, supported);
     }
 
     /**
@@ -98,11 +112,12 @@ public final class Config<T> {
      *
      * @param name The name of the configuration value
      * @param value The default value
+     * @param supported True if this config option should be exposed
      * @return The created configuration value
      */
-    @Contract("_, _ -> new")
-    private static Config<Integer> integer(String name, int value) {
-        return new Config<>(name, value, Integer::valueOf);
+    @Contract("_, _, _ -> new")
+    private static Config<Integer> integer(String name, int value, BooleanSupplier supported) {
+        return new Config<>(name, value, Integer::valueOf, supported);
     }
 
     /**
@@ -110,11 +125,12 @@ public final class Config<T> {
      *
      * @param name The name of the configuration value
      * @param value The default value
+     * @param supported True if this config option should be exposed
      * @return The created configuration value
      */
-    @Contract("_, _ -> new")
-    private static Config<String> string(String name, String value) {
-        return new Config<>(name, value, Function.identity());
+    @Contract("_, _, _ -> new")
+    private static Config<String> string(String name, String value, BooleanSupplier supported) {
+        return new Config<>(name, value, Function.identity(), supported);
     }
 
     /**
@@ -135,11 +151,16 @@ public final class Config<T> {
     @NotNull
     private T value;
 
+    /**
+     * Used to determine if this config option should be exposed.
+     */
+    private final BooleanSupplier supported;
 
-    private Config(@NotNull String name, @NotNull T value, @NotNull Function<@NotNull String, @NotNull T> deserializer) {
+    private Config(@NotNull String name, @NotNull T value, @NotNull Function<@NotNull String, @NotNull T> deserializer, @NotNull BooleanSupplier supported) {
         this.name = name;
         this.deserializer = deserializer;
         this.value = value;
+        this.supported = supported;
 
         CONFIGURATION.add(this);
     }
@@ -161,6 +182,15 @@ public final class Config<T> {
      */
     private void deserialize(@NotNull String value) {
         this.value = deserializer.apply(value);
+    }
+
+    /**
+     * Checks if this config option should be exposed.
+     *
+     * @return true if this config option should be exposed
+     */
+    private boolean supported() {
+        return supported.getAsBoolean();
     }
 
     @Override
