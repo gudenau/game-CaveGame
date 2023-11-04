@@ -131,6 +131,12 @@ public final class VulkanCommandBuffer implements AutoCloseable {
         }
     }
 
+    public void bindDescriptorSets(long layout, long descriptorSet) {
+        try(var stack = MemoryStack.stackPush()) {
+            vkCmdBindDescriptorSets(handle, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, stack.longs(descriptorSet), null);
+        }
+    }
+
     public void bindIndexBuffer(VkGraphicsBuffer buffer) {
         //TODO Don't assume 16 bit index buffers
         vkCmdBindIndexBuffer(handle, buffer.handle(), 0, VK_INDEX_TYPE_UINT16);

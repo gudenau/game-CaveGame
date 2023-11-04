@@ -4,8 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.shader.AttributeType;
-import net.gudenau.cavegame.util.BufferStreams;
-import net.gudenau.cavegame.util.collection.FastCollectors;
+import net.gudenau.cavegame.util.BufferUtil;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
@@ -16,13 +15,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.util.spvc.Spv.SpvDecorationLocation;
 import static org.lwjgl.util.spvc.Spvc.*;
-import static org.lwjgl.vulkan.VK10.*;
 
 public final class ShaderReflection implements AutoCloseable {
     public final class Resource {
@@ -150,7 +146,7 @@ public final class ShaderReflection implements AutoCloseable {
             }
 
             var buffer = SpvcReflectedResource.create(list.get(0), (int) countPointer.get(0));
-            var resources = BufferStreams.structureStream(buffer)
+            var resources = BufferUtil.structureStream(buffer)
                 .map(Resource::new)
                 .toList();
             resourceCache.put(resource, resources);

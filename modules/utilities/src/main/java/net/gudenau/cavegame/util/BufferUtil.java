@@ -2,9 +2,11 @@ package net.gudenau.cavegame.util;
 
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.PointerBuffer;
+import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.Struct;
 import org.lwjgl.system.StructBuffer;
 
+import java.nio.LongBuffer;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.function.LongConsumer;
@@ -15,8 +17,8 @@ import java.util.stream.StreamSupport;
 import static java.util.Spliterators.*;
 import static java.util.Spliterator.SIZED;
 
-public final class BufferStreams {
-    private BufferStreams() {
+public final class BufferUtil {
+    private BufferUtil() {
         throw new AssertionError();
     }
 
@@ -63,5 +65,20 @@ public final class BufferStreams {
                 return false;
             }
         };
+    }
+
+    @NotNull
+    public static LongBuffer ofFilled(@NotNull MemoryStack stack, int size, long value) {
+        var buffer = stack.mallocLong(size);
+        for(int i = 0; i < size; i++) {
+            buffer.put(i, value);
+        }
+        return buffer;
+    }
+
+    public static long @NotNull [] toArray(@NotNull LongBuffer buffer) {
+        var array = new long[buffer.remaining()];
+        buffer.get(buffer.position(), array);
+        return array;
     }
 }

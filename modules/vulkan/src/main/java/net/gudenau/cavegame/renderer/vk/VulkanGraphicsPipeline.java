@@ -1,11 +1,15 @@
 package net.gudenau.cavegame.renderer.vk;
 
+import net.gudenau.cavegame.renderer.GraphicsBuffer;
 import net.gudenau.cavegame.renderer.shader.VertexAttribute;
+import net.gudenau.cavegame.util.BufferUtil;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.SequencedCollection;
 
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.VK10.*;
@@ -16,6 +20,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
     private final long pipelineLayout;
     private final long handle;
     private final long descriptorSetLayout;
+    private final VulkanDescriptorSets descriptorSets;
 
     //TODO Cache stuff
     public VulkanGraphicsPipeline(
@@ -24,7 +29,9 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
         @NotNull VulkanRenderPass renderPass,
         @NotNull Collection<VulkanShaderModule> modules,
         @NotNull VkVertexFormat format,
-        @NotNull VkUniformLayout uniforms
+        @NotNull VkUniformLayout uniforms,
+        @NotNull VulkanDescriptorPool descriptorPool,
+        @NotNull List<GraphicsBuffer> buffers
     ) {
         this.device = device;
 
@@ -93,7 +100,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             rasterizer.polygonMode(VK_POLYGON_MODE_FILL);
             rasterizer.lineWidth(1);
             rasterizer.cullMode(VK_CULL_MODE_BACK_BIT);
-            rasterizer.frontFace(VK_FRONT_FACE_CLOCKWISE);
+            rasterizer.frontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
             rasterizer.depthBiasEnable(false);
 
             var multisampling = VkPipelineMultisampleStateCreateInfo.calloc(stack);
@@ -188,6 +195,29 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 throw new RuntimeException("Failed to create Vulkan graphics pipeline: " + VulkanUtils.errorString(result));
             }
             handle = pointer.get(0);
+
+            descriptorSets = new VulkanDescriptorSets(device, descriptorPool, BufferUtil.ofFilled(stack, buffers.size(), descriptorSetLayout));
+
+            var descriptorWrites = VkWriteDescriptorSet.calloc(buffers.size(), stack);
+            for(int i = 0; i < buffers.size(); i++) {
+                var bufferInfos = VkDescriptorBufferInfo.calloc(1, stack);
+                var bufferInfo = bufferInfos.get(0);
+                bufferInfo.buffer(((VkGraphicsBuffer) buffers.get(i)).handle());
+                bufferInfo.offset(0);
+                bufferInfo.range(VK_WHOLE_SIZE);
+
+                var descriptorWrite = descriptorWrites.get(i);
+                descriptorWrite.sType$Default();
+                descriptorWrite.dstSet(descriptorSets.get(i));
+                descriptorWrite.dstBinding(0);
+                descriptorWrite.dstArrayElement(0);
+                descriptorWrite.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+                descriptorWrite.descriptorCount(1);
+                descriptorWrite.pBufferInfo(bufferInfos);
+                descriptorWrite.pImageInfo(null);
+                descriptorWrite.pTexelBufferView(null);
+            }
+            vkUpdateDescriptorSets(device.handle(), descriptorWrites, null);
         }
     }
 
@@ -208,10 +238,19 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
         return handle;
     }
 
+    public long layout() {
+        return pipelineLayout;
+    }
+
     @Override
     public void close() {
+        descriptorSets.close();
         vkDestroyPipeline(device.handle(), handle, VulkanAllocator.get());
         vkDestroyDescriptorSetLayout(device.handle(), descriptorSetLayout, VulkanAllocator.get());
         vkDestroyPipelineLayout(device.handle(), pipelineLayout, VulkanAllocator.get());
+    }
+
+    public long descriptorSet(int index) {
+        return descriptorSets.get(index);
     }
 }

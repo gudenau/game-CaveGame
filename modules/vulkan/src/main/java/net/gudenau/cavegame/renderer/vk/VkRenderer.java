@@ -7,7 +7,6 @@ import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
@@ -17,13 +16,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.lwjgl.vulkan.KHRSwapchain.*;
-import static org.lwjgl.vulkan.VK10.VK_SUCCESS;
+import static org.lwjgl.vulkan.VK10.*;
 
 public final class VkRenderer implements Renderer {
     private static final Logger LOGGER = Logger.forName("Vulkan");
 
     private static final int MAX_FRAMES_IN_FLIGHT = 2;
     private int currentFrame = 0;
+    private int realCurrentFrame = 0;
     private boolean framebufferResized = false;
 
     @NotNull
@@ -50,6 +50,7 @@ public final class VkRenderer implements Renderer {
     @Nullable
     private FrameState currentFrameState;
     private int currentImageIndex;
+    private final VulkanDescriptorPool descriptorPool;
 
     private record FrameState(
         int index,
@@ -69,7 +70,11 @@ public final class VkRenderer implements Renderer {
         }
     }
 
-    private FrameState createFrameState(int index, @NotNull VulkanLogicalDevice device, @NotNull VulkanCommandPool commandPool) {
+    private FrameState createFrameState(
+        int index,
+        @NotNull VulkanLogicalDevice device,
+        @NotNull VulkanCommandPool commandPool
+    ) {
         return new FrameState(
             index,
             new VulkanCommandBuffer(device, commandPool),
@@ -100,6 +105,8 @@ public final class VkRenderer implements Renderer {
                 .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, extent))
                 .toList();
             commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
+
+            descriptorPool = new VulkanDescriptorPool(logicalDevice, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT);
 
             frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
                 .mapToObj((index) -> createFrameState(index, logicalDevice, commandPool))
@@ -137,6 +144,7 @@ public final class VkRenderer implements Renderer {
         destroySwapChain();
 
         frameState.forEach(FrameState::close);
+        descriptorPool.close();
         commandPool.close();
         //graphicsPipeline.close();
         renderPass.close();
@@ -154,6 +162,7 @@ public final class VkRenderer implements Renderer {
     @Override
     public void begin() {
         currentFrameState = this.frameState.get(currentFrame);
+        realCurrentFrame = currentFrame;
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
         var commandBuffer = currentFrameState.commandBuffer();
@@ -190,13 +199,15 @@ public final class VkRenderer implements Renderer {
             new Vector3f(0, 0, 0),
             new Vector3f(0, 0, 1)
         );
-        ubo.proj().perspective(
+        var projection = ubo.proj();
+        projection.perspective(
             (float) Math.toRadians(45),
             swapchain.extent().width() / (float) swapchain.extent().height(),
             0.1F,
             10.0F,
             true
         );
+        projection.m11(-projection.m11());
 
         try(var stack = MemoryStack.stackPush()) {
             var buffer = stack.calloc(Float.BYTES * 4 * 4 * 3);
@@ -214,10 +225,13 @@ public final class VkRenderer implements Renderer {
     public void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer) {
         var commandBuffer = currentFrameState.commandBuffer;
         commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapchainFramebuffers.get(currentImageIndex));
-        commandBuffer.bindPipeline(((VkShader) vertexBuffer.shader()).pipeline());
+        var vulkanShader = (VkShader) vertexBuffer.shader();
+        commandBuffer.bindPipeline(vulkanShader.pipeline());
         commandBuffer.setViewport(swapchain.extent().width(), swapchain.extent().height());
         commandBuffer.setScissor(0, 0, swapchain.extent().width(), swapchain.extent().height());
         commandBuffer.bindVertexBuffer((VkGraphicsBuffer) vertexBuffer);
+        var pipeline = vulkanShader.pipeline();
+        commandBuffer.bindDescriptorSets(pipeline.layout(), pipeline.descriptorSet(realCurrentFrame));
         if(indexBuffer != null) {
             commandBuffer.bindIndexBuffer((VkGraphicsBuffer) indexBuffer);
             commandBuffer.drawIndexed(vertexCount, 1, 0, 0, 0);
@@ -305,7 +319,11 @@ public final class VkRenderer implements Renderer {
                 renderPass,
                 modules.values(),
                 vertexFormat,
-                uniforms
+                uniforms,
+                descriptorPool,
+                frameState.stream()
+                    .map(FrameState::uniformBuffer)
+                    .toList()
             );
 
             return new VkShader(this, pipeline, vertexFormat);
