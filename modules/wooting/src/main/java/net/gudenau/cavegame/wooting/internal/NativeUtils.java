@@ -46,30 +46,7 @@ public final class NativeUtils {
         if (pointer.equals(MemorySegment.NULL)) {
             return null;
         }
-        return pointer.reinterpret(Long.MAX_VALUE).getUtf8String(0);
-    }
-
-    /**
-     * The lookup to use when finding symbols to the Wooting SDK.
-     */
-    private static final SymbolLookup LOOKUP = SymbolLookup.libraryLookup(Path.of("/home/gudenau/projects/java/games/CaveGame/external/wooting-analog-sdk/wrapper/libwooting_analog_wrapper.so"), Arena.global());
-    /**
-     * The linker to use when interfacing with the Wooting SDK.
-     */
-    private static final Linker LINKER = Linker.nativeLinker();
-
-    /**
-     * Creates a {@link MethodHandle} bound to a function in the Wooting SDK.
-     *
-     * @param name The name of the function symbol
-     * @param result The return type of the function or null for void
-     * @param args The arguments of the function
-     * @return The created {@link MethodHandle}
-     */
-    @NotNull
-    public static MethodHandle function(@NotNull String name, @Nullable MemoryLayout result, @NotNull MemoryLayout @NotNull ... args) {
-        var symbol = LOOKUP.find(name).orElseThrow(() -> new RuntimeException("Failed to find symbol " + name));
-        return LINKER.downcallHandle(symbol, result == null ? FunctionDescriptor.ofVoid(args) : FunctionDescriptor.of(result, args));
+        return pointer.reinterpret(Long.MAX_VALUE).getString(0);
     }
 
     /**

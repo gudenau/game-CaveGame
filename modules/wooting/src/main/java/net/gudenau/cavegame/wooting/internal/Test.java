@@ -49,8 +49,8 @@ public class Test {
         try(var arena = Arena.ofConfined()) {
             check(wooting_analog_initialise());
 
-            var keyCodes = arena.allocateArray(ValueLayout.JAVA_SHORT, 4).asByteBuffer().order(ByteOrder.nativeOrder()).asShortBuffer();
-            var values = arena.allocateArray(ValueLayout.JAVA_FLOAT, 4).asByteBuffer().order(ByteOrder.nativeOrder()).asFloatBuffer();
+            var keyCodes = arena.allocate(ValueLayout.JAVA_SHORT, 4).asByteBuffer().order(ByteOrder.nativeOrder()).asShortBuffer();
+            var values = arena.allocate(ValueLayout.JAVA_FLOAT, 4).asByteBuffer().order(ByteOrder.nativeOrder()).asFloatBuffer();
 
             for(;;) {
                 try {

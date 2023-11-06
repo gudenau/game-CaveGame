@@ -4,12 +4,16 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import sun.misc.Unsafe;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -146,6 +150,52 @@ public final class Treachery {
             return LOOKUP.bind(getter, "get", MethodType.methodType(Object.class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new RuntimeException("Trusted lookup could not ", e);
+        }
+    }
+
+    public static MethodHandle findVirtualMethod(Class<?> owner, String name, MethodType type) throws NoSuchMethodException {
+        try {
+            return LOOKUP.findVirtual(owner, name, type);
+        } catch(IllegalAccessException e) {
+            throw new RuntimeException("Trusted lookup could not find " + MiscUtils.longClassName(owner) + '#' + name, e);
+        }
+    }
+
+    private static final MethodHandle ClassLoader$findResource;
+    static {
+        try {
+            ClassLoader$findResource = findVirtualMethod(ClassLoader.class, "findResource", MethodType.methodType(URL.class, String.class, String.class));
+        } catch(NoSuchMethodException e) {
+            throw new RuntimeException("Failed to find ClassLoader.findResource", e);
+        }
+    }
+
+    @NotNull
+    public static InputStream getResourceAsStream(@NotNull Module module, @NotNull String path) throws IOException {
+        if(path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        URL resource;
+        try {
+            var loader = module.getClassLoader();
+            resource = (URL) ClassLoader$findResource.invokeExact(loader, module.getName(), path);
+        } catch(Throwable e) {
+            throw new RuntimeException("Failed to get resource " + path + " from " + module.getName(), e);
+        }
+
+        if(resource == null) {
+            throw new FileNotFoundException(module.getName() + "!" + path);
+        }
+
+        return resource.openStream();
+    }
+
+    public static MethodHandle findVirtualMethodUnchecked(Class<?> owner, String name, MethodType type) {
+        try {
+            return LOOKUP.findVirtual(owner, name, type);
+        } catch(NoSuchMethodException | IllegalAccessException e) {
+            throw new RuntimeException("Failed to find method " + MiscUtils.longClassName(owner) + '#' + name, e);
         }
     }
 }

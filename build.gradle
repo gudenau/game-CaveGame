@@ -32,12 +32,6 @@ allprojects {
         modularity.inferModulePath = true
     }
 
-    compileJava {
-        if(project.name != 'launcher') {
-            options.compilerArgs += ['--enable-preview']
-        }
-    }
-
     apply from: rootProject.projectDir.toPath().resolve(java.nio.file.Path.of('scripts', 'lwjgl.gradle')).toAbsolutePath().toString()
 }
 

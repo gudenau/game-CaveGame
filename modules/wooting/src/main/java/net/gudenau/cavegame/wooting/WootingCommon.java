@@ -104,8 +104,8 @@ public sealed interface WootingCommon permits Dummy {
             var result = (MemorySegment) NEW_DEVICE_INFO.invokeExact(
                 vendor_id,
                 product_id,
-                arena.allocateUtf8String(manufacturer_name),
-                arena.allocateUtf8String(device_name),
+                arena.allocateFrom(manufacturer_name),
+                arena.allocateFrom(device_name),
                 device_id,
                 device_type
             );

@@ -1,6 +1,7 @@
 package net.gudenau.cavegame;
 
 import net.gudenau.cavegame.config.Config;
+import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.BufferType;
@@ -10,6 +11,7 @@ import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.util.Closer;
+import net.gudenau.cavegame.util.MiscUtils;
 import org.lwjgl.system.Configuration;
 
 public final class CaveGame {
@@ -21,6 +23,7 @@ public final class CaveGame {
     public static void main(String[] args) {
         Config.parseArguments(args);
 
+        Configuration.SHARED_LIBRARY_EXTRACT_PATH.set(MiscUtils.createTempDir("lwjgl").toString());
         if(Config.DEBUG.get()) {
             Configuration.DEBUG.set(true);
             Configuration.DEBUG_MEMORY_ALLOCATOR.set(true);
