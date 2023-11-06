@@ -6,3 +6,7 @@ build/
 run/
 .vscode/
 bin/
+*.so
+*.dll
+*.dylib
+
