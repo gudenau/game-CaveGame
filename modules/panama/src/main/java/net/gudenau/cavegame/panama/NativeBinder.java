@@ -14,6 +14,11 @@ public final class NativeBinder {
     private final SymbolLookup lookup;
     private final String library;
 
+    NativeBinder(SymbolLookup lookup, String library) {
+        this.lookup = lookup;
+        this.library = library;
+    }
+
     NativeBinder(Path path) {
         lookup = SymbolLookup.libraryLookup(path, arena);
         library = path.getFileName().toString();

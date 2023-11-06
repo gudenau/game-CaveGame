@@ -39,8 +39,23 @@ public final class Lazy<T> {
      * @param <T> The type of the held value
      */
     @Contract("_ -> new")
-    public static  <T> Lazy<T> of(@NotNull Supplier<@NotNull T> factory) {
+    public static <T> Lazy<T> of(@NotNull Supplier<@NotNull T> factory) {
         return new Lazy<>(Objects.requireNonNull(factory, "factory can't be null"));
+    }
+
+    /**
+     * Creates a new lazy supplier with the provided factory.
+     * <p>
+     * Equivalent to:
+     * {@snippet : Lazy.of(supplier)::get }
+     *
+     * @param factory The factory to use
+     * @return The new Lazy instance
+     * @param <T> The type of the held value
+     */
+    @Contract("_ -> new")
+    public static <T> Supplier<T> supplier(@NotNull Supplier<@NotNull T> factory) {
+        return of(factory)::get;
     }
 
     /**

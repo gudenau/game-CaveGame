@@ -2,6 +2,7 @@ package net.gudenau.cavegame.wooting.internal;
 
 import net.gudenau.cavegame.panama.NativeBinder;
 import net.gudenau.cavegame.panama.NativeUtils;
+import net.gudenau.cavegame.panama.Posix;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.invoke.MethodHandle;
@@ -13,6 +14,12 @@ import static java.lang.foreign.ValueLayout.JAVA_LONG;
  * Handles to the native functions from the Wooting SDK.
  */
 public final class Functions {
+    static {
+        // A stupid issue with the Wooting SDKs, they use Rust printing instead of a sane logging mechanism.
+        // This "fixes" it until they do it correctly.
+        Posix.instance().setenv("RUST_LOG", "off", true);
+    }
+
     private static final NativeBinder BINDER = NativeUtils.load("wooting_analog_wrapper");
 
     @NotNull

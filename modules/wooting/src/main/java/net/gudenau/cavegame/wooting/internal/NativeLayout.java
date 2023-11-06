@@ -89,7 +89,7 @@ public final class NativeLayout {
 
                     if(difference != 0) {
                         size += difference;
-                        elements.add(i, MemoryLayout.paddingLayout(difference << 3));
+                        elements.add(i, MemoryLayout.paddingLayout(difference));
                         // We added stuff to the list, ensure the loop doesn't iterate over the same thing multiple
                         // times
                         i++;

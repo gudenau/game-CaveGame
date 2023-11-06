@@ -99,7 +99,7 @@ public record DeviceInfoFFI(@NotNull MemorySegment segment) {
      * @return The retrieved value
      */
     public short vendor_id() {
-        return (short) VENDOR_ID.get(segment);
+        return (short) VENDOR_ID.get(segment, 0);
     }
 
     /**
@@ -108,7 +108,7 @@ public record DeviceInfoFFI(@NotNull MemorySegment segment) {
      * @return The retrieved value
      */
     public short product_id() {
-        return (short) PRODUCT_ID.get(segment);
+        return (short) PRODUCT_ID.get(segment, 0);
     }
 
     /**
@@ -118,7 +118,7 @@ public record DeviceInfoFFI(@NotNull MemorySegment segment) {
      */
     @Nullable
     public String manufacturer_name() {
-        return NativeUtils.string((MemorySegment) MANUFACTURER_NAME.get(segment));
+        return NativeUtils.string((MemorySegment) MANUFACTURER_NAME.get(segment, 0));
     }
 
     /**
@@ -128,7 +128,7 @@ public record DeviceInfoFFI(@NotNull MemorySegment segment) {
      */
     @Nullable
     public String device_name() {
-        return NativeUtils.string((MemorySegment) DEVICE_NAME.get(segment));
+        return NativeUtils.string((MemorySegment) DEVICE_NAME.get(segment, 0));
     }
 
     /**

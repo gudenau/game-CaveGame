@@ -198,4 +198,12 @@ public final class Treachery {
             throw new RuntimeException("Failed to find method " + MiscUtils.longClassName(owner) + '#' + name, e);
         }
     }
+
+    public static MethodHandle findVirtualSetterUnchecked(Class<?> owner, String name, Class<?> type) {
+        try {
+            return LOOKUP.findSetter(owner, name, type);
+        } catch(NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException("Failed to find setter for " + MiscUtils.longClassName(owner) + '#' + name, e);
+        }
+    }
 }

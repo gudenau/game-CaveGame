@@ -6,10 +6,8 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.Platform;
 
 import java.io.IOException;
-import java.lang.foreign.AddressLayout;
-import java.lang.foreign.Linker;
-import java.lang.foreign.MemoryLayout;
-import java.lang.foreign.ValueLayout;
+import java.lang.foreign.*;
+import java.lang.invoke.MethodHandle;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -38,9 +36,16 @@ public final class NativeUtils {
 
     private static final Path TEMP_DIR = MiscUtils.createTempDir("natives");
     private static final Map<LibKey, NativeBinder> BINDERS = new HashMap<>();
+    private static final NativeBinder SYSTEM_BINDER = new NativeBinder(Linker.nativeLinker().defaultLookup(), "system");
 
     private NativeUtils() {
         throw new AssertionError();
+    }
+
+    @NotNull
+    public static NativeBinder systemBinder() {
+        enableNativeAccess(MiscUtils.getCaller(0).getModule());
+        return SYSTEM_BINDER;
     }
 
     @NotNull
@@ -53,6 +58,7 @@ public final class NativeUtils {
     @NotNull
     private static NativeBinder doLoad(LibKey libKey) {
         var module = libKey.module();
+        enableNativeAccess(module);
         var library = libKey.name();
         var platform = Platform.get();
         var arch = Platform.getArchitecture();
@@ -89,5 +95,18 @@ public final class NativeUtils {
         }
 
         return new NativeBinder(path);
+    }
+
+    private static final MethodHandle Module$enableNativeAccess;
+    static {
+        Module$enableNativeAccess = Treachery.findVirtualSetterUnchecked(Module.class, "enableNativeAccess", boolean.class);
+    }
+
+    private static void enableNativeAccess(Module module) {
+        try {
+            Module$enableNativeAccess.invokeExact(module, true);
+        } catch(Throwable e) {
+            throw new RuntimeException("Failed to enable native access for module " + module.getName(), e);
+        }
     }
 }
