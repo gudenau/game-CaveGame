@@ -4,9 +4,11 @@ import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.input.Wooting;
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
+import net.gudenau.cavegame.renderer.BufferBuilder;
 import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.GlfwUtils;
 import net.gudenau.cavegame.renderer.RendererInfo;
+import net.gudenau.cavegame.renderer.model.ObjLoader;
 import net.gudenau.cavegame.renderer.texture.PngReader;
 import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.renderer.texture.TextureFormat;
@@ -74,7 +76,7 @@ public final class CaveGame {
 
             Texture texture;
             try {
-                texture = textureManager.loadTexture(new Identifier(NAMESPACE, "tile/face"));
+                texture = textureManager.loadTexture(new Identifier(NAMESPACE, "viking_room"));
             } catch(IOException e) {
                 throw new RuntimeException(e);
             }
@@ -84,35 +86,12 @@ public final class CaveGame {
                 Map.of("texSampler", texture)
             ));
 
-            var builder = basicShader.builder();
-            for(int i = 0; i < 2; i++) {
-                builder.position(-0.5F, -0.5F, i * -0.5F)
-                    .color(1, 0, 0)
-                    .textureCoord(1, 0)
-                    .next();
-                builder.position(+0.5F, -0.5F, i * -0.5F)
-                    .color(0, 1, 0)
-                    .textureCoord(0, 0)
-                    .next();
-                builder.position(+0.5F, +0.5F, i * -0.5F)
-                    .color(0, 0, 1)
-                    .textureCoord(0, 1)
-                    .next();
-
-                builder.position(+0.5F, +0.5F, i * -0.5F)
-                    .color(0, 0, 1)
-                    .textureCoord(0, 1)
-                    .next();
-                builder.position(-0.5F, +0.5F, i * -0.5F)
-                    .color(1, 1, 1)
-                    .textureCoord(1, 1)
-                    .next();
-                builder.position(-0.5F, -0.5F, i * -0.5F)
-                    .color(1, 0, 0)
-                    .textureCoord(1, 0)
-                    .next();
+            BufferBuilder builder = null;
+            try {
+                builder = ObjLoader.load(basicShader.builder(), new Identifier(NAMESPACE, "viking_room"));
+            } catch(IOException e) {
+                throw new RuntimeException(e);
             }
-
             var vertexCount = builder.vertexCount();
             var triangleBuffers = builder.build();
             var vertexBuffer = triangleBuffers.get(BufferType.VERTEX);
