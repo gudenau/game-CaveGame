@@ -5,6 +5,9 @@
     },
     "inColor": {
       "usage": "color"
+    },
+    "inTextureCoord": {
+      "usage": "texture_coord"
     }
   },
   "uniforms": {
@@ -12,6 +15,9 @@
       "shader": "vertex",
       "usage": "ubo"
     }
+  },
+  "textures": {
+    "texSampler": {}
   },
   "shaders": {
     "vertex": {

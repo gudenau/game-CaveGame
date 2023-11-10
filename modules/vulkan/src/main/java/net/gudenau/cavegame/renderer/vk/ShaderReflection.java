@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.lwjgl.system.MemoryUtil.NULL;
+import static org.lwjgl.util.spvc.Spv.SpvDecorationBinding;
 import static org.lwjgl.util.spvc.Spv.SpvDecorationLocation;
 import static org.lwjgl.util.spvc.Spvc.*;
 
@@ -43,11 +44,16 @@ public final class ShaderReflection implements AutoCloseable {
             return spvc_compiler_get_decoration(compiler, resource.id(), SpvDecorationLocation);
         }
 
+        public int binding() {
+            return spvc_compiler_get_decoration(compiler, resource.id(), SpvDecorationBinding);
+        }
+
         @NotNull
         public AttributeType baseType() {
             return switch(spvc_type_get_basetype(base)) {
                 case SPVC_BASETYPE_FP32 -> AttributeType.FLOAT;
                 case SPVC_BASETYPE_STRUCT -> AttributeType.STRUCT;
+                case SPVC_BASETYPE_SAMPLED_IMAGE -> AttributeType.SAMPLER;
                 default -> throw new RuntimeException("Don't know how to handle a base type of " + spvc_type_get_basetype(base));
             };
         }
@@ -164,6 +170,10 @@ public final class ShaderReflection implements AutoCloseable {
 
     public List<Resource> outputs() {
         return getResources(SPVC_RESOURCE_TYPE_STAGE_OUTPUT);
+    }
+
+    public List<Resource> samplers() {
+        return getResources(SPVC_RESOURCE_TYPE_SAMPLED_IMAGE);
     }
 
     @Override

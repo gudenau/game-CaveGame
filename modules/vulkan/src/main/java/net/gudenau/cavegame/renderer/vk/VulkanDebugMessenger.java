@@ -2,6 +2,7 @@ package net.gudenau.cavegame.renderer.vk;
 
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
+import net.gudenau.cavegame.util.Treachery;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkDebugUtilsMessengerCallbackDataEXT;
@@ -67,7 +68,22 @@ public final class VulkanDebugMessenger implements AutoCloseable {
             level = LogLevel.DEBUG;
         }
 
-        LOGGER.log(level, callbackData.pMessageString(), level == LogLevel.ERROR ? new Throwable("Stacktrace:") : null);
+        Throwable exception;
+        if(level == LogLevel.ERROR) {
+            exception = new Throwable("Stacktrace:");
+            var trace = exception.getStackTrace();
+            int strip;
+            for(strip = 1; strip < trace.length; strip++) {
+                if(!trace[strip].getClassName().startsWith("org.lwjgl")) {
+                    break;
+                }
+            }
+            Treachery.stripStackFrames(exception, strip);
+        } else {
+            exception = null;
+        }
+
+        LOGGER.log(level, callbackData.pMessageString(), exception);
 
         return VK_FALSE;
     }

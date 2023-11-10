@@ -7,12 +7,20 @@ import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.GlfwUtils;
 import net.gudenau.cavegame.renderer.RendererInfo;
+import net.gudenau.cavegame.renderer.texture.PngReader;
+import net.gudenau.cavegame.renderer.texture.Texture;
+import net.gudenau.cavegame.renderer.texture.TextureFormat;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.util.Closer;
 import net.gudenau.cavegame.util.MiscUtils;
+import net.gudenau.cavegame.util.Treachery;
 import org.lwjgl.system.Configuration;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public final class CaveGame {
     public static final String NAMESPACE = Identifier.CAVEGAME_NAMESPACE;
@@ -60,39 +68,47 @@ public final class CaveGame {
         try(var closer = new Closer()) {
             var window = closer.add(rendererInfo.createWindow("CaveGame", 640, 480));
             var renderer = closer.add(rendererInfo.createRenderer(window));
+            var textureManager = renderer.textureManager();
 
             window.bind();
 
-            var basicShader = closer.add(renderer.loadShader(new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic")));
+            Texture texture;
+            try {
+                texture = textureManager.loadTexture(new Identifier(NAMESPACE, "tile/face"));
+            } catch(IOException e) {
+                throw new RuntimeException(e);
+            }
 
-            /*
-{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-             */
+            var basicShader = closer.add(renderer.loadShader(
+                new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic"),
+                Map.of("texSampler", texture)
+            ));
 
             var builder = basicShader.builder();
             builder.position(-0.5F, -0.5F)
                 .color(1, 0, 0)
+                .textureCoord(1, 0)
                 .next();
             builder.position(+0.5F, -0.5F)
                 .color(0, 1, 0)
+                .textureCoord(0, 0)
                 .next();
             builder.position(+0.5F,  +0.5F)
                 .color(0, 0, 1)
+                .textureCoord(0, 1)
                 .next();
 
             builder.position(+0.5F,  +0.5F)
                 .color(0, 0, 1)
+                .textureCoord(0, 1)
                 .next();
             builder.position(-0.5F, +0.5F)
                 .color(1, 1, 1)
+                .textureCoord(1, 1)
                 .next();
             builder.position(-0.5F,  -0.5F)
                 .color(1, 0, 0)
+                .textureCoord(1, 0)
                 .next();
 
             var triangleBuffers = builder.build();

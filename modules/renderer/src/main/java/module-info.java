@@ -3,8 +3,12 @@ import net.gudenau.cavegame.renderer.RendererInfo;
 module net.gudenau.cavegame.renderer {
     exports net.gudenau.cavegame.renderer;
     exports net.gudenau.cavegame.renderer.shader;
+    exports net.gudenau.cavegame.renderer.texture;
 
     uses RendererInfo;
+
+    //FIXME Remove this once PngReader is no longer using AWT
+    requires java.desktop;
 
     requires org.jetbrains.annotations;
 

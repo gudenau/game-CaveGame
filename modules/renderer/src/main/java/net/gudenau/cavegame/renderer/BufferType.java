@@ -4,4 +4,5 @@ public enum BufferType {
     VERTEX,
     INDEX,
     UNIFORM,
+    STAGING,
 }

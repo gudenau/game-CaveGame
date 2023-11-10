@@ -6,6 +6,7 @@ import net.gudenau.cavegame.codec.CodecBuilder;
 public enum AttributeUsage {
     POSITION,
     COLOR,
+    TEXTURE_COORD,
     ;
 
     public static final Codec<AttributeUsage> CODEC = CodecBuilder.ofEnum(AttributeUsage.class);

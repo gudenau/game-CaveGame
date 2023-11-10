@@ -9,6 +9,7 @@ import java.nio.LongBuffer;
 
 import static org.lwjgl.vulkan.VK10.*;
 
+//TODO Track allocated sets per type?
 public final class VulkanDescriptorSets implements AutoCloseable {
     private final VulkanLogicalDevice device;
     private final VulkanDescriptorPool pool;

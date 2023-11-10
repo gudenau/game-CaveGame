@@ -23,6 +23,11 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
     @NotNull
     private final VkWindow window;
 
+    @NotNull
+    private final VkPhysicalDeviceProperties deviceProperties;
+    @NotNull
+    private final VkPhysicalDeviceFeatures deviceFeatures;
+
     private final int rank;
 
     private int graphicsQueue = -1;
@@ -35,6 +40,12 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
         this.device = device;
         this.surface = surface;
         this.window = window;
+
+        deviceProperties = VkPhysicalDeviceProperties.calloc();
+        deviceFeatures = VkPhysicalDeviceFeatures.calloc();
+
+        vkGetPhysicalDeviceProperties(device, deviceProperties);
+        vkGetPhysicalDeviceFeatures(device, deviceFeatures);
 
         findQueues();
         querySwapChainSupport();
@@ -145,33 +156,26 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
             return -1;
         }
 
-        try(var stack = MemoryStack.stackPush()) {
-            var deviceProperties = VkPhysicalDeviceProperties.calloc(stack);
-            var deviceFeatures = VkPhysicalDeviceFeatures.calloc(stack);
-            vkGetPhysicalDeviceProperties(device, deviceProperties);
-            vkGetPhysicalDeviceFeatures(device, deviceFeatures);
-
-            if(!deviceFeatures.geometryShader()) {
-                return -1;
-            }
-
-            if(!validateExtensions()) {
-                return -1;
-            }
-
-            if(surfaceFormat == null || surfacePresentMode == -1) {
-                return -1;
-            }
-
-            return switch (deviceProperties.deviceType()) {
-                case VK_PHYSICAL_DEVICE_TYPE_OTHER -> 100000000;
-                case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU -> 400000000;
-                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU -> 500000000;
-                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU -> 300000000;
-                case VK_PHYSICAL_DEVICE_TYPE_CPU -> 200000000;
-                default -> 0;
-            };
+        if(!deviceFeatures.geometryShader()) {
+            return -1;
         }
+
+        if(!validateExtensions()) {
+            return -1;
+        }
+
+        if(surfaceFormat == null || surfacePresentMode == -1) {
+            return -1;
+        }
+
+        return switch(deviceProperties.deviceType()) {
+            case VK_PHYSICAL_DEVICE_TYPE_OTHER -> 100000000;
+            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU -> 400000000;
+            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU -> 500000000;
+            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU -> 300000000;
+            case VK_PHYSICAL_DEVICE_TYPE_CPU -> 200000000;
+            default -> 0;
+        };
     }
 
     private boolean validateExtensions() {
@@ -228,6 +232,14 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
         return presentQueue;
     }
 
+    public float maxSamplerAnisotropy() {
+        if(deviceFeatures.samplerAnisotropy()) {
+            return deviceProperties.limits().maxSamplerAnisotropy();
+        } else {
+            return Float.NaN;
+        }
+    }
+
     @NotNull
     public VkSurfaceCapabilitiesKHR surfaceCapabilities(@NotNull MemoryStack stack) {
         var capabilities = VkSurfaceCapabilitiesKHR.calloc(stack);
@@ -254,6 +266,9 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
 
     @Override
     public void close() {
+        deviceFeatures.close();
+        deviceProperties.close();
+
         if(surfaceFormat != null) {
             surfaceFormat.free();
         }

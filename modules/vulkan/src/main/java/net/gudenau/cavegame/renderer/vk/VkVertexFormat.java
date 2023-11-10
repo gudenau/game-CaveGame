@@ -12,6 +12,7 @@ public final class VkVertexFormat implements VertexFormat {
     private final int stride;
     private final VertexAttribute color;
     private final VertexAttribute position;
+    private final VertexAttribute textureCoord;
 
     public VkVertexFormat(@NotNull VulkanShaderModule vertex, @NotNull Map<String, ShaderMeta.Attribute> metadata) {
         Set<String> missing = new HashSet<>();
@@ -21,6 +22,7 @@ public final class VkVertexFormat implements VertexFormat {
 
         VertexAttribute color = null;
         VertexAttribute position = null;
+        VertexAttribute textureCoord = null;
 
         var inputs = new ArrayList<>(vertex.inputs());
         inputs.sort(Comparator.comparingInt(VulkanShaderModule.Resource::location));
@@ -40,12 +42,14 @@ public final class VkVertexFormat implements VertexFormat {
                 switch(usage) {
                     case COLOR -> color = attribute;
                     case POSITION -> position = attribute;
+                    case TEXTURE_COORD -> textureCoord = attribute;
                 }
             }
         }
 
         this.color = color;
         this.position = position;
+        this.textureCoord = textureCoord;
 
         if(!missing.isEmpty()) {
             throw new RuntimeException(
@@ -69,13 +73,19 @@ public final class VkVertexFormat implements VertexFormat {
     @Override
     @NotNull
     public Optional<VertexAttribute> color() {
-        return Optional.of(color);
+        return Optional.ofNullable(color);
     }
 
     @Override
     @NotNull
     public Optional<VertexAttribute> position() {
-        return Optional.of(position);
+        return Optional.ofNullable(position);
+    }
+
+    @Override
+    @NotNull
+    public Optional<VertexAttribute> textureCoord() {
+        return Optional.ofNullable(textureCoord);
     }
 
     @Override

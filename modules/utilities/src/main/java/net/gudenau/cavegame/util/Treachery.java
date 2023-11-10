@@ -10,13 +10,17 @@ import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.invoke.VarHandle;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 /**
  * A bunch of hacks, beware the dragons. (This is undocumented on purpose)
@@ -157,7 +161,7 @@ public final class Treachery {
         try {
             return LOOKUP.findVirtual(owner, name, type);
         } catch(IllegalAccessException e) {
-            throw new RuntimeException("Trusted lookup could not find " + MiscUtils.longClassName(owner) + '#' + name, e);
+            throw new RuntimeException("Trusted lookup could not find " + MiscUtils.longClassName(owner) + "::" + name, e);
         }
     }
 
@@ -195,7 +199,7 @@ public final class Treachery {
         try {
             return LOOKUP.findVirtual(owner, name, type);
         } catch(NoSuchMethodException | IllegalAccessException e) {
-            throw new RuntimeException("Failed to find method " + MiscUtils.longClassName(owner) + '#' + name, e);
+            throw new RuntimeException("Failed to find method " + MiscUtils.longClassName(owner) + "::" + name, e);
         }
     }
 
@@ -203,7 +207,23 @@ public final class Treachery {
         try {
             return LOOKUP.findSetter(owner, name, type);
         } catch(NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("Failed to find setter for " + MiscUtils.longClassName(owner) + '#' + name, e);
+            throw new RuntimeException("Failed to find setter for " + MiscUtils.longClassName(owner) + "::" + name, e);
         }
+    }
+
+    private static final VarHandle Throwable$stackTrace;
+    static {
+        try {
+            Throwable$stackTrace = LOOKUP.findVarHandle(Throwable.class, "stackTrace", StackTraceElement[].class);
+        } catch(NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException("Failed to get handle to Throwable::stackTrace", e);
+        }
+    }
+
+    public static void stripStackFrames(@NotNull Throwable exception, int strip) {
+        var trace = exception.getStackTrace();
+        var replacement = new StackTraceElement[trace.length - strip];
+        System.arraycopy(trace, strip, replacement, 0, replacement.length);
+        Throwable$stackTrace.set(exception, replacement);
     }
 }

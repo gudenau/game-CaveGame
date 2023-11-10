@@ -17,5 +17,8 @@ public interface VertexFormat {
     @NotNull
     Optional<VertexAttribute> position();
 
+    @NotNull
+    Optional<VertexAttribute> textureCoord();
+
     int stride();
 }

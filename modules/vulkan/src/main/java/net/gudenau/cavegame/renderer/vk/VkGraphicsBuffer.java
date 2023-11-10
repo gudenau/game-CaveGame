@@ -22,36 +22,39 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
     private final int size;
 
     private final long handle;
-    private final long memory;
+    private final VulkanMemory memory;
 
     private VkShader shader;
 
     VkGraphicsBuffer(@NotNull VulkanLogicalDevice device, @NotNull VulkanCommandPool commandPool, @NotNull BufferType type, int size) {
         this.device = device;
         this.commandPool = commandPool;
-        this.empherial = type == BufferType.UNIFORM;
+        this.empherial = switch(type) {
+            case UNIFORM, STAGING -> true;
+            default -> false;
+        };
         this.size = size;
 
         try(var stack = MemoryStack.stackPush()) {
             var handlePointer = stack.longs(0);
-            var memoryPointer = stack.longs(0);
-            createBuffer(
+            memory = createBuffer(
                 switch(type) {
-                    case VERTEX -> VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-                    case INDEX -> VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-                    case UNIFORM -> VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-                } | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    case VERTEX -> VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                    case INDEX -> VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                    case UNIFORM -> VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                    case STAGING -> VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+                },
                 empherial ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT :
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                handlePointer,
-                memoryPointer
+                handlePointer
             );
             handle = handlePointer.get(0);
-            memory = memoryPointer.get(0);
         }
     }
 
-    private void createBuffer(int usage, int properties, @NotNull LongBuffer handle, @NotNull LongBuffer memory) {
+    private VulkanMemory createBuffer(int usage, int properties, @NotNull LongBuffer handle) {
+        VulkanMemory memory;
+
         try(var stack = MemoryStack.stackPush()) {
             var bufferInfo = VkBufferCreateInfo.calloc(stack);
             bufferInfo.sType$Default();
@@ -68,47 +71,17 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
             var memoryRequirements = VkMemoryRequirements.calloc(stack);
             vkGetBufferMemoryRequirements(device.handle(), buffer, memoryRequirements);
 
-            var allocationInfo = VkMemoryAllocateInfo.calloc(stack);
-            allocationInfo.sType$Default();
-            allocationInfo.allocationSize(memoryRequirements.size());
-            allocationInfo.memoryTypeIndex(determineMemoryType(
-                memoryRequirements.memoryTypeBits(),
-                properties
-            ));
+            memory = new VulkanMemory(device, memoryRequirements, properties);
 
-            result = vkAllocateMemory(device.handle(), allocationInfo, VulkanAllocator.get(), memory);
+            result = vkBindBufferMemory(device.handle(), buffer, memory.handle(), 0);
             if(result != VK_SUCCESS) {
                 vkDestroyBuffer(device.handle(), handle.get(0), VulkanAllocator.get());
-                throw new RuntimeException("Failed to allocate buffer: " + VulkanUtils.errorString(result));
-            }
-
-            result = vkBindBufferMemory(device.handle(), buffer, memory.get(0), 0);
-            if(result != VK_SUCCESS) {
-                vkDestroyBuffer(device.handle(), handle.get(0), VulkanAllocator.get());
-                vkFreeMemory(device.handle(), memory.get(0), VulkanAllocator.get());
+                memory.close();
                 throw new RuntimeException("Failed to bind buffer: " + VulkanUtils.errorString(result));
             }
         }
-    }
 
-    private int determineMemoryType(int filter, int flags) {
-        try(var stack = MemoryStack.stackPush()) {
-            var properties = VkPhysicalDeviceMemoryProperties.calloc(stack);
-            vkGetPhysicalDeviceMemoryProperties(device.device().device(), properties);
-
-            var types = properties.memoryTypes();
-            var count = properties.memoryTypeCount();
-            for(int i = 0; i < count; i++) {
-                if(
-                    (filter & (1 << i)) != 0 &&
-                    (types.get(i).propertyFlags() & flags) == flags
-                ) {
-                    return i;
-                }
-            }
-        }
-
-        throw new RuntimeException("Failed to find memory type");
+        return memory;
     }
 
     public void shader(@NotNull VkShader shader) {
@@ -118,51 +91,27 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
     @Override
     public void upload(@NotNull ByteBuffer data) {
         if(empherial) {
-            doEmpherialUpload(data);
+            memory.upload(data);
         } else {
             doUpload(data);
         }
     }
 
-    private ByteBuffer mapBuffer(int size, long handle) {
-        try(var stack = MemoryStack.stackPush()) {
-            var bufferPointer = stack.pointers(0);
-            var result = vkMapMemory(device.handle(), handle, 0, size, 0, bufferPointer);
-            if(result != VK_SUCCESS) {
-                throw new RuntimeException("Failed to map Vulkan memory: " + VulkanUtils.errorString(result));
-            }
-            return bufferPointer.getByteBuffer(0, size);
-        }
-    }
-
-    private void doEmpherialUpload(ByteBuffer data) {
-        var buffer = mapBuffer(Math.min(data.remaining(), this.size), memory);
-        try {
-            MemoryUtil.memCopy(data, buffer);
-        } finally {
-            vkUnmapMemory(device.handle(), memory);
-        }
+    public int size() {
+        return size;
     }
 
     private void doUpload(ByteBuffer data) {
         try(var stack = MemoryStack.stackPush()) {
             var stagingPointer = stack.longs(0);
-            var stagingMemoryPointer = stack.longs(0);
-            createBuffer(
+            var stagingMemory = createBuffer(
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                stagingPointer,
-                stagingMemoryPointer
+                stagingPointer
             );
             var staging = stagingPointer.get(0);
-            var stagingMemory = stagingMemoryPointer.get(0);
 
-            var buffer = mapBuffer(Math.min(data.remaining(), this.size), stagingMemory);
-            try {
-                MemoryUtil.memCopy(data, buffer);
-            } finally {
-                vkUnmapMemory(device.handle(), stagingMemory);
-            }
+            stagingMemory.upload(data);
 
             try(var commandBuffer = new VulkanCommandBuffer(device, commandPool)) {
                 commandBuffer.begin();
@@ -173,7 +122,7 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
             }
 
             vkDestroyBuffer(device.handle(), staging, VulkanAllocator.get());
-            vkFreeMemory(device.handle(), stagingMemory, VulkanAllocator.get());
+            stagingMemory.close();
         }
     }
 
@@ -185,7 +134,7 @@ public class VkGraphicsBuffer implements GraphicsBuffer {
     @Override
     public void close() {
         vkDestroyBuffer(device.handle(), handle, VulkanAllocator.get());
-        vkFreeMemory(device.handle(), memory, VulkanAllocator.get());
+        memory.close();
     }
 
     public long handle() {

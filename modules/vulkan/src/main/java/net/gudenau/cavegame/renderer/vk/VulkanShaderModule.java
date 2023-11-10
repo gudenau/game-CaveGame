@@ -29,6 +29,8 @@ public final class VulkanShaderModule implements AutoCloseable {
     private final List<Resource> outputs;
     @NotNull
     private final List<Resource> uniforms;
+    @NotNull
+    private final List<Resource> samplers;
 
     private final int inputStride;
     private final int outputStride;
@@ -36,6 +38,7 @@ public final class VulkanShaderModule implements AutoCloseable {
     public record Resource(
         @NotNull String name,
         int location,
+        int binding,
         AttributeType type,
         int size,
         int stride
@@ -51,6 +54,7 @@ public final class VulkanShaderModule implements AutoCloseable {
                     yield new Resource(
                         resource.name(),
                         resource.location(),
+                        resource.binding(),
                         resource.baseType(),
                         -1,
                         bytes
@@ -59,6 +63,7 @@ public final class VulkanShaderModule implements AutoCloseable {
                 default -> new Resource(
                     resource.name(),
                     resource.location(),
+                    resource.binding(),
                     resource.baseType(),
                     resource.vectorSize(),
                     resource.size()
@@ -89,6 +94,10 @@ public final class VulkanShaderModule implements AutoCloseable {
                 .toList();
 
             uniforms = reflection.uniforms().stream()
+                .map(Resource::of)
+                .toList();
+
+            samplers = reflection.samplers().stream()
                 .map(Resource::of)
                 .toList();
         }
@@ -132,6 +141,10 @@ public final class VulkanShaderModule implements AutoCloseable {
 
     public List<Resource> uniforms() {
         return uniforms;
+    }
+
+    public List<Resource> samplers() {
+        return samplers;
     }
 
     public int outputStride() {

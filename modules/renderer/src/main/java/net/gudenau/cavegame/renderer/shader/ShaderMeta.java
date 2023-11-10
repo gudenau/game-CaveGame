@@ -6,33 +6,39 @@ import net.gudenau.cavegame.codec.Codec;
 import net.gudenau.cavegame.codec.CodecBuilder;
 import net.gudenau.cavegame.codec.CodecResult;
 import net.gudenau.cavegame.codec.ops.JsonOps;
+import net.gudenau.cavegame.renderer.texture.TextureFormat;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.JFormattedTextField;
 import java.io.IOException;
 import java.util.Map;
 
 public record ShaderMeta(
     @NotNull Map<String, Attribute> attributes,
     @NotNull Map<String, Uniform> uniforms,
-    @NotNull Map<ShaderType, Shader> shaders
+    @NotNull Map<ShaderType, Shader> shaders,
+    @NotNull Map<String, Texture> textures
 ) {
     public static final Codec<ShaderMeta> CODEC = CodecBuilder.<ShaderMeta>builder()
         .optional("attributes", Codec.map(Codec.STRING, Attribute.CODEC), ShaderMeta::attributes)
         .optional("uniforms", Codec.map(Codec.STRING, Uniform.CODEC), ShaderMeta::uniforms)
         .required("shaders", Codec.map(ShaderType.CODEC, Shader.CODEC), ShaderMeta::shaders)
+        .optional("textures", Codec.map(Codec.STRING, Texture.CODEC), ShaderMeta::textures)
         .build(ShaderMeta.class);
 
     public ShaderMeta(
         @Nullable Map<String, Attribute> attributes,
         @Nullable Map<String, Uniform> uniforms,
-        @NotNull Map<ShaderType, Shader> shaders
+        @NotNull Map<ShaderType, Shader> shaders,
+        @Nullable Map<String, Texture> textures
     ) {
         this.attributes = attributes == null ? Map.of() : attributes;
         this.uniforms = uniforms == null ? Map.of() : uniforms;
         this.shaders = shaders;
+        this.textures = textures == null ? Map.of() : textures;
     }
 
     public static CodecResult<ShaderMeta> load(@NotNull Identifier metadata) {
@@ -63,5 +69,11 @@ public record ShaderMeta(
         public static final Codec<Shader> CODEC = CodecBuilder.<Shader>builder()
             .required("files", Codec.map(Codec.STRING, Identifier.CODEC), Shader::files)
             .build(Shader.class);
+    }
+
+    public record Texture(
+    ) {
+        public static final Codec<Texture> CODEC = CodecBuilder.<Texture>builder()
+            .build(Texture.class);
     }
 }

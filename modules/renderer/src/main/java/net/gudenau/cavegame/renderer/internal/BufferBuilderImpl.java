@@ -52,10 +52,12 @@ public class BufferBuilderImpl implements BufferBuilder {
     private final class Vertex {
         private final @Nullable Data position;
         private final @Nullable Data color;
+        private final @Nullable Data textureCoord;
 
-        private Vertex(@Nullable Data position, @Nullable Data color) {
+        private Vertex(@Nullable Data position, @Nullable Data color, @Nullable Data textureCoord) {
             this.position = position;
             this.color = color;
+            this.textureCoord = textureCoord;
         }
 
         public void put(int offset, ByteBuffer buffer) {
@@ -65,6 +67,9 @@ public class BufferBuilderImpl implements BufferBuilder {
             if(color != null) {
                 color.put(colorOffset + offset, buffer);
             }
+            if(textureCoord != null) {
+                textureCoord.put(textureCoordOffset + offset, buffer);
+            }
         }
 
         @Override
@@ -73,19 +78,21 @@ public class BufferBuilderImpl implements BufferBuilder {
             if(obj == null || obj.getClass() != this.getClass()) return false;
             var that = (Vertex) obj;
             return Objects.equals(this.position, that.position) &&
-                Objects.equals(this.color, that.color);
+                Objects.equals(this.color, that.color) &&
+                Objects.equals(this.textureCoord, that.textureCoord);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(position, color);
+            return Objects.hash(position, color, textureCoord);
         }
 
         @Override
         public String toString() {
             return "Vertex[" +
                 "position=" + position + ", " +
-                "color=" + color + ']';
+                "color=" + color + ", " +
+                "textureCoord=" + textureCoord + ']';
         }
     }
 
@@ -101,6 +108,10 @@ public class BufferBuilderImpl implements BufferBuilder {
     private final int colorOffset;
     private final int colorSize;
     private Data color;
+
+    private final int textureCoordOffset;
+    private final int textureCoordSize;
+    private Data textureCoord;
 
     public BufferBuilderImpl(@NotNull Shader shader, @NotNull BiFunction<ByteBuffer, BufferType, GraphicsBuffer> factory) {
         this.factory = factory;
@@ -127,6 +138,16 @@ public class BufferBuilderImpl implements BufferBuilder {
             colorSize = -1;
         }
 
+        var textureCoord = format.textureCoord().orElse(null);
+        if(textureCoord != null) {
+            textureCoordOffset = textureCoord.offset();
+            textureCoordSize = textureCoord.count();
+            stride += textureCoordSize * Float.BYTES;
+        } else {
+            textureCoordOffset = -1;
+            textureCoordSize = -1;
+        }
+
         this.stride = stride;
     }
 
@@ -151,6 +172,15 @@ public class BufferBuilderImpl implements BufferBuilder {
     }
 
     @Override
+    public @NotNull BufferBuilder textureCoord(float u, float v) {
+        if(textureCoordOffset != -1) {
+            textureCoord = new Data(Arrays.copyOf(new float[] {u, v}, textureCoordSize));
+        }
+
+        return this;
+    }
+
+    @Override
     public @NotNull BufferBuilder next() {
         if((positionOffset == -1) != (position == null)) {
             throw new IllegalStateException("Missing position data");
@@ -158,8 +188,11 @@ public class BufferBuilderImpl implements BufferBuilder {
         if((colorOffset == -1) != (color == null)) {
             throw new IllegalStateException("Missing color data");
         }
+        if((textureCoordOffset == -1) != (textureCoord == null)) {
+            throw new IllegalStateException("Missing texture coord data");
+        }
 
-        var vertex = new Vertex(position, color);
+        var vertex = new Vertex(position, color, textureCoord);
         var size = vertices.size();
         var index = vertices.getOrDefault(vertex, size);
         if(size == index) {

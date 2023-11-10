@@ -1,7 +1,9 @@
 package net.gudenau.cavegame.renderer.vk;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.gudenau.cavegame.renderer.GraphicsBuffer;
 import net.gudenau.cavegame.renderer.shader.VertexAttribute;
+import net.gudenau.cavegame.renderer.vk.texture.VulkanTexture;
 import net.gudenau.cavegame.util.BufferUtil;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
@@ -9,7 +11,6 @@ import org.lwjgl.vulkan.*;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.SequencedCollection;
 
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.VK10.*;
@@ -23,6 +24,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
     private final VulkanDescriptorSets descriptorSets;
 
     //TODO Cache stuff
+    //FIXME Break this up
     public VulkanGraphicsPipeline(
         @NotNull VulkanLogicalDevice device,
         @NotNull VkExtent2D viewportExtent,
@@ -31,7 +33,8 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
         @NotNull VkVertexFormat format,
         @NotNull VkUniformLayout uniforms,
         @NotNull VulkanDescriptorPool descriptorPool,
-        @NotNull List<GraphicsBuffer> buffers
+        @NotNull List<GraphicsBuffer> buffers,
+        @NotNull Int2ObjectMap<VulkanTexture> textures
     ) {
         this.device = device;
 
@@ -122,8 +125,8 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             colorBlending.logicOpEnable(false);
             colorBlending.pAttachments(colorBlendAttachment);
 
-            var layoutBindings = VkDescriptorSetLayoutBinding.calloc(uniforms.uniforms().size(), stack);
-            for(int i = 0; i < uniforms.uniforms().size(); i++) {
+            var layoutBindings = VkDescriptorSetLayoutBinding.calloc(uniforms.uniforms().size() + 1, stack);
+            for(int i = 0, limit = uniforms.uniforms().size(); i < limit; i++) {
                 var uniform = uniforms.uniforms().get(i);
                 var binding = layoutBindings.get(i);
                 binding.binding(uniform.location());
@@ -133,6 +136,15 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                     case FRAGMENT -> VK_SHADER_STAGE_FRAGMENT_BIT;
                     case VERTEX -> VK_SHADER_STAGE_VERTEX_BIT;
                 });
+            }
+
+            {
+                var binding = layoutBindings.get(uniforms.uniforms().size());
+                binding.binding(1);
+                binding.descriptorCount(1);
+                binding.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+                binding.pImmutableSamplers(null);
+                binding.stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
             }
 
             var layoutInfo = VkDescriptorSetLayoutCreateInfo.calloc(stack);
@@ -198,7 +210,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
 
             descriptorSets = new VulkanDescriptorSets(device, descriptorPool, BufferUtil.ofFilled(stack, buffers.size(), descriptorSetLayout));
 
-            var descriptorWrites = VkWriteDescriptorSet.calloc(buffers.size(), stack);
+            var descriptorWrites = VkWriteDescriptorSet.calloc(buffers.size() + buffers.size() * textures.size(), stack);
             for(int i = 0; i < buffers.size(); i++) {
                 var bufferInfos = VkDescriptorBufferInfo.calloc(1, stack);
                 var bufferInfo = bufferInfos.get(0);
@@ -206,7 +218,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 bufferInfo.offset(0);
                 bufferInfo.range(VK_WHOLE_SIZE);
 
-                var descriptorWrite = descriptorWrites.get(i);
+                var descriptorWrite = descriptorWrites.get();
                 descriptorWrite.sType$Default();
                 descriptorWrite.dstSet(descriptorSets.get(i));
                 descriptorWrite.dstBinding(0);
@@ -217,6 +229,35 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 descriptorWrite.pImageInfo(null);
                 descriptorWrite.pTexelBufferView(null);
             }
+
+            if(!textures.isEmpty()) {
+                for(int i = 0; i < buffers.size(); i++) {
+                    for(var entry : textures.int2ObjectEntrySet()) {
+                        var binding = entry.getIntKey();
+                        var texture = entry.getValue();
+
+                        //TODO This seems wrong.
+                        var imageInfos = VkDescriptorImageInfo.calloc(1, stack);
+                        var imageInfo = imageInfos.get(0);
+                        imageInfo.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                        imageInfo.imageView(texture.imageView().handle());
+                        imageInfo.sampler(texture.sampler().handle());
+
+                        var descriptorWrite = descriptorWrites.get();
+                        descriptorWrite.sType$Default();
+                        descriptorWrite.dstSet(descriptorSets.get(i));
+                        descriptorWrite.dstBinding(binding);
+                        descriptorWrite.dstArrayElement(0);
+                        descriptorWrite.descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+                        descriptorWrite.descriptorCount(1);
+                        descriptorWrite.pBufferInfo(null);
+                        descriptorWrite.pImageInfo(imageInfos);
+                        descriptorWrite.pTexelBufferView(null);
+                    }
+                }
+            }
+
+            descriptorWrites.flip();
             vkUpdateDescriptorSets(device.handle(), descriptorWrites, null);
         }
     }
@@ -231,6 +272,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 default -> throw new RuntimeException("Unknown format for " + attribute.type().name().toLowerCase() + attribute.count());
             };
             case STRUCT -> throw new RuntimeException("Struct is not yet supported");
+            case SAMPLER -> throw new RuntimeException("Sampler is not yet supported");
         };
     }
 

@@ -39,6 +39,7 @@ public final class VulkanLogicalDevice implements AutoCloseable {
             queueCreateInfo.position(0);
 
             var deviceFeatures = VkPhysicalDeviceFeatures.calloc(stack);
+            deviceFeatures.samplerAnisotropy(!Float.isNaN(device.maxSamplerAnisotropy()));
 
             var createInfo = VkDeviceCreateInfo.calloc(stack);
             createInfo.sType$Default();

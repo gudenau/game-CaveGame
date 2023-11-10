@@ -37,6 +37,10 @@ public interface BufferBuilder {
         return color(r, g, b, 1);
     }
 
+    @Contract("_, _ -> this")
+    @NotNull
+    BufferBuilder textureCoord(float u, float v);
+
     @Contract("-> this")
     @NotNull
     BufferBuilder next();

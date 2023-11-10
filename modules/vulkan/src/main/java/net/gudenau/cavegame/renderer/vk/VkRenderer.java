@@ -1,10 +1,16 @@
 package net.gudenau.cavegame.renderer.vk;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.*;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.renderer.shader.ShaderMeta;
+import net.gudenau.cavegame.renderer.texture.Texture;
+import net.gudenau.cavegame.renderer.texture.TextureManager;
+import net.gudenau.cavegame.renderer.vk.texture.VulkanTexture;
+import net.gudenau.cavegame.renderer.vk.texture.VulkanTextureManager;
 import net.gudenau.cavegame.resource.Identifier;
+import net.gudenau.cavegame.util.collection.FastCollectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -12,6 +18,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -51,6 +58,7 @@ public final class VkRenderer implements Renderer {
     private FrameState currentFrameState;
     private int currentImageIndex;
     private final VulkanDescriptorPool descriptorPool;
+    private final VulkanTextureManager textureManager;
 
     private record FrameState(
         int index,
@@ -106,11 +114,17 @@ public final class VkRenderer implements Renderer {
                 .toList();
             commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
 
-            descriptorPool = new VulkanDescriptorPool(logicalDevice, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT);
+            descriptorPool = new VulkanDescriptorPool(
+                logicalDevice,
+                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT),
+                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT)
+            );
 
             frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
                 .mapToObj((index) -> createFrameState(index, logicalDevice, commandPool))
                 .toList();
+
+            textureManager = new VulkanTextureManager(this);
         }
     }
 
@@ -140,6 +154,8 @@ public final class VkRenderer implements Renderer {
     @Override
     public void close() {
         logicalDevice.waitForIdle();
+
+        textureManager.close();
 
         destroySwapChain();
 
@@ -221,6 +237,12 @@ public final class VkRenderer implements Renderer {
         logicalDevice.waitForIdle();
     }
 
+    @NotNull
+    @Override
+    public TextureManager textureManager() {
+        return textureManager;
+    }
+
     @Override
     public void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer) {
         var commandBuffer = currentFrameState.commandBuffer;
@@ -274,13 +296,13 @@ public final class VkRenderer implements Renderer {
     }
 
     @Override
-    public Shader loadShader(@NotNull Identifier shader) {
+    public Shader loadShader(@NotNull Identifier identifier, @NotNull Map<String, Texture> textures) {
         ShaderMeta metadata;
         {
-            var result = ShaderMeta.load(shader);
+            var result = ShaderMeta.load(identifier);
             var partial = result.partial();
             if (partial.isPresent()) {
-                throw new RuntimeException("Failed to load shader metadata for " + shader + '\n' + partial.get().error());
+                throw new RuntimeException("Failed to load shader metadata for " + identifier + '\n' + partial.get().error());
             }
             metadata = result.getResult();
         }
@@ -308,6 +330,28 @@ public final class VkRenderer implements Renderer {
             );
         }
 
+        Int2ObjectMap<VulkanTexture> textureBindings;
+        {
+            var fragmentShader = modules.get(VulkanShaderModule.Type.FRAGMENT);
+            var fragmentSamplers = fragmentShader.samplers().stream()
+                .collect(Collectors.toUnmodifiableMap(
+                    VulkanShaderModule.Resource::name,
+                    Function.identity()
+                ));
+            var keys = fragmentSamplers.keySet();
+            if(!keys.equals(metadata.textures().keySet())) {
+                throw new RuntimeException("Fragment shader for " + identifier + " has unmatched image samplers");
+            }
+            if(!textures.keySet().containsAll(keys)) {
+                throw new RuntimeException("Textures supplied to shader " + identifier + " where missing elements");
+            }
+
+            textureBindings = fragmentSamplers.entrySet().stream().collect(FastCollectors.toInt2ObjectMap(
+                (entry) -> entry.getValue().binding(),
+                (entry) -> (VulkanTexture) textures.get(entry.getKey())
+            ));
+        }
+
         var vertex = modules.get(VulkanShaderModule.Type.VERTEX);
         var uniforms = new VkUniformLayout(vertex, metadata.uniforms());
         var vertexFormat = new VkVertexFormat(vertex, metadata.attributes());
@@ -323,7 +367,8 @@ public final class VkRenderer implements Renderer {
                 descriptorPool,
                 frameState.stream()
                     .map(FrameState::uniformBuffer)
-                    .toList()
+                    .toList(),
+                textureBindings
             );
 
             return new VkShader(this, pipeline, vertexFormat);
@@ -336,5 +381,15 @@ public final class VkRenderer implements Renderer {
     @Override
     public VkGraphicsBuffer createBuffer(@NotNull BufferType type, int size) {
         return new VkGraphicsBuffer(logicalDevice, commandPool, type, size);
+    }
+
+    @NotNull
+    public VulkanLogicalDevice logicalDevice() {
+        return logicalDevice;
+    }
+
+    @NotNull
+    public VulkanCommandPool commandPool() {
+        return commandPool;
     }
 }
