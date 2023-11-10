@@ -18,7 +18,7 @@ public final class VulkanTexture implements Texture {
     private final int height;
     private final int format;
 
-    private final long handle;
+    private final VulkanImage image;
     private final VulkanMemory memory;
     private final VulkanImageView imageView;
     private final long size;
@@ -44,33 +44,14 @@ public final class VulkanTexture implements Texture {
         VulkanCommandPool commandPool = renderer.commandPool();
 
         try(var stack = MemoryStack.stackPush()) {
-            var imageInfo = VkImageCreateInfo.calloc(stack);
-            imageInfo.sType$Default();
-            imageInfo.imageType(VK_IMAGE_TYPE_2D);
-            imageInfo.extent().set(width, height, 1);
-            imageInfo.mipLevels(1);
-            imageInfo.arrayLayers(1);
-            imageInfo.format(format);
-            imageInfo.tiling(VK_IMAGE_TILING_OPTIMAL);
-            imageInfo.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
-            imageInfo.usage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-            imageInfo.sharingMode(VK_SHARING_MODE_EXCLUSIVE);
-            imageInfo.samples(VK_SAMPLE_COUNT_1_BIT);
-            imageInfo.flags(0);
-
-            var texturePointer = stack.longs(0);
-            var result = vkCreateImage(device.handle(), imageInfo, VulkanAllocator.get(), texturePointer);
-            if(result != VK_SUCCESS) {
-                throw new RuntimeException("Failed to create Vulkan image: " + VulkanUtils.errorString(result));
-            }
-            handle = texturePointer.get(0);
+            image = new VulkanImage(device, width, height, format);
 
             var memoryRequirements = VkMemoryRequirements.calloc(stack);
-            vkGetImageMemoryRequirements(device.handle(), handle, memoryRequirements);
+            vkGetImageMemoryRequirements(device.handle(), image.handle(), memoryRequirements);
             size = memoryRequirements.size();
 
             memory = new VulkanMemory(device, memoryRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            vkBindImageMemory(device.handle(), handle, memory.handle(), 0);
+            vkBindImageMemory(device.handle(), image.handle(), memory.handle(), 0);
 
             try(var commandBuffer = new VulkanCommandBuffer(device, commandPool)) {
                 commandBuffer.begin();
@@ -84,7 +65,7 @@ public final class VulkanTexture implements Texture {
                 vkQueueWaitIdle(device.graphicsQueue());
             }
 
-            imageView = new VulkanImageView(device, handle, format);
+            imageView = new VulkanImageView(device, image);
         }
     }
 
@@ -125,7 +106,7 @@ public final class VulkanTexture implements Texture {
                 barrier.newLayout(newLayout);
                 barrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
                 barrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-                barrier.image(handle);
+                barrier.image(image.handle());
                 barrier.subresourceRange().set(
                     VK_IMAGE_ASPECT_COLOR_BIT,
                     0,
@@ -183,7 +164,7 @@ public final class VulkanTexture implements Texture {
                     height,
                     1
                 );
-                vkCmdCopyBufferToImage(commandBuffer.handle(), buffer.handle(), handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions);
+                vkCmdCopyBufferToImage(commandBuffer.handle(), buffer.handle(), image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions);
             }
         //    commandBuffer.end();
         //    commandBuffer.submit(device.graphicsQueue());
@@ -194,7 +175,7 @@ public final class VulkanTexture implements Texture {
     @Override
     public void close() {
         imageView.close();
-        vkDestroyImage(device.handle(), handle, VulkanAllocator.get());
+        image.close();
         memory.close();
     }
 }

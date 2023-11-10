@@ -11,6 +11,10 @@ public final class VulkanImageView implements AutoCloseable {
     private final VulkanLogicalDevice device;
     private final long handle;
 
+    public VulkanImageView(@NotNull VulkanLogicalDevice device, @NotNull VulkanImage image) {
+        this(device, image.handle(), image.format());
+    }
+
     public VulkanImageView(@NotNull VulkanLogicalDevice device, long image, int format) {
         this.device = device;
 

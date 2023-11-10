@@ -105,7 +105,7 @@ public final class VkRenderer implements Renderer {
             logicalDevice = new VulkanLogicalDevice(physicalDevice);
             swapchain = new VulkanSwapchain(physicalDevice, surface, logicalDevice, extent);
             imageViews = swapchain.stream()
-                .mapToObj((image) -> new VulkanImageView(logicalDevice, image, swapchain.imageFormat()))
+                .map((image) -> new VulkanImageView(logicalDevice, image))
                 .toList();
             renderPass = new VulkanRenderPass(logicalDevice, swapchain);
 
@@ -143,7 +143,7 @@ public final class VkRenderer implements Renderer {
             var extent = physicalDevice.surfaceExtent(stack);
             swapchain = new VulkanSwapchain(physicalDevice, surface, logicalDevice, extent);
             imageViews = swapchain.stream()
-                .mapToObj((image) -> new VulkanImageView(logicalDevice, image, swapchain.imageFormat()))
+                .map((image) -> new VulkanImageView(logicalDevice, image))
                 .toList();
             swapchainFramebuffers = imageViews.stream()
                 .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, extent))

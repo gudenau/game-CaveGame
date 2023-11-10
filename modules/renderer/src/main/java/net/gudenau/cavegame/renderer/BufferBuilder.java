@@ -46,4 +46,6 @@ public interface BufferBuilder {
     BufferBuilder next();
 
     @NotNull Map<BufferType, GraphicsBuffer> build();
+
+    int vertexCount();
 }

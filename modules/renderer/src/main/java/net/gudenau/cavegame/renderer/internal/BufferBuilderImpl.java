@@ -235,4 +235,9 @@ public class BufferBuilderImpl implements BufferBuilder {
             MemoryUtil.memFree(vertexBuffer);
         }
     }
+
+    @Override
+    public int vertexCount() {
+        return indices.size();
+    }
 }

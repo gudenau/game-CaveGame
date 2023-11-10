@@ -1,14 +1,14 @@
 package net.gudenau.cavegame.renderer.vk;
 
-import it.unimi.dsi.fastutil.longs.LongList;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkExtent2D;
 import org.lwjgl.vulkan.VkSwapchainCreateInfoKHR;
 
-import java.util.stream.LongStream;
+import java.util.List;
+import java.util.stream.Stream;
 
-import static org.lwjgl.vulkan.KHRSurface.*;
+import static org.lwjgl.vulkan.KHRSurface.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 import static org.lwjgl.vulkan.KHRSwapchain.*;
 import static org.lwjgl.vulkan.VK10.*;
 
@@ -17,7 +17,7 @@ public final class VulkanSwapchain implements AutoCloseable {
     private final VulkanLogicalDevice device;
     private final long handle;
     @NotNull
-    private final LongList swapChainImages;
+    private final List<VulkanImage> swapChainImages;
     private final int imageFormat;
     @NotNull
     private final VkExtent2D extent;
@@ -73,12 +73,14 @@ public final class VulkanSwapchain implements AutoCloseable {
             var imageCountPointer = stack.ints(0);
             vkGetSwapchainImagesKHR(logicalDevice.handle(), handle, imageCountPointer, null);
 
+            imageFormat = surfaceFormat.format();
+
             imageCount = imageCountPointer.get(0);
             var swapChainImages = stack.callocLong(imageCount);
             vkGetSwapchainImagesKHR(logicalDevice.handle(), handle, imageCountPointer, swapChainImages);
-            this.swapChainImages = VulkanUtils.extractList(swapChainImages);
-
-            imageFormat = surfaceFormat.format();
+            this.swapChainImages = VulkanUtils.extractList(swapChainImages).longStream()
+                .mapToObj((handle) -> new VulkanImage(device, extent.width(), extent.height(), imageFormat, handle))
+                .toList();
         }
     }
 
@@ -103,8 +105,8 @@ public final class VulkanSwapchain implements AutoCloseable {
     }
 
     @NotNull
-    public LongStream stream() {
-        return swapChainImages.longStream();
+    public Stream<VulkanImage> stream() {
+        return swapChainImages.stream();
     }
 
     @Override

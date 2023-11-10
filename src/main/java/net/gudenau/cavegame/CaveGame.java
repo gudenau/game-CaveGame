@@ -85,32 +85,35 @@ public final class CaveGame {
             ));
 
             var builder = basicShader.builder();
-            builder.position(-0.5F, -0.5F)
-                .color(1, 0, 0)
-                .textureCoord(1, 0)
-                .next();
-            builder.position(+0.5F, -0.5F)
-                .color(0, 1, 0)
-                .textureCoord(0, 0)
-                .next();
-            builder.position(+0.5F,  +0.5F)
-                .color(0, 0, 1)
-                .textureCoord(0, 1)
-                .next();
+            for(int i = 0; i < 2; i++) {
+                builder.position(-0.5F, -0.5F, i * -0.5F)
+                    .color(1, 0, 0)
+                    .textureCoord(1, 0)
+                    .next();
+                builder.position(+0.5F, -0.5F, i * -0.5F)
+                    .color(0, 1, 0)
+                    .textureCoord(0, 0)
+                    .next();
+                builder.position(+0.5F, +0.5F, i * -0.5F)
+                    .color(0, 0, 1)
+                    .textureCoord(0, 1)
+                    .next();
 
-            builder.position(+0.5F,  +0.5F)
-                .color(0, 0, 1)
-                .textureCoord(0, 1)
-                .next();
-            builder.position(-0.5F, +0.5F)
-                .color(1, 1, 1)
-                .textureCoord(1, 1)
-                .next();
-            builder.position(-0.5F,  -0.5F)
-                .color(1, 0, 0)
-                .textureCoord(1, 0)
-                .next();
+                builder.position(+0.5F, +0.5F, i * -0.5F)
+                    .color(0, 0, 1)
+                    .textureCoord(0, 1)
+                    .next();
+                builder.position(-0.5F, +0.5F, i * -0.5F)
+                    .color(1, 1, 1)
+                    .textureCoord(1, 1)
+                    .next();
+                builder.position(-0.5F, -0.5F, i * -0.5F)
+                    .color(1, 0, 0)
+                    .textureCoord(1, 0)
+                    .next();
+            }
 
+            var vertexCount = builder.vertexCount();
             var triangleBuffers = builder.build();
             var vertexBuffer = triangleBuffers.get(BufferType.VERTEX);
             var indexBuffer = triangleBuffers.get(BufferType.INDEX);
@@ -120,7 +123,7 @@ public final class CaveGame {
 
             do {
                 renderer.begin();
-                renderer.drawBuffer(6, vertexBuffer, indexBuffer);
+                renderer.drawBuffer(vertexCount, vertexBuffer, indexBuffer);
                 renderer.draw();
 
                 window.flip();
