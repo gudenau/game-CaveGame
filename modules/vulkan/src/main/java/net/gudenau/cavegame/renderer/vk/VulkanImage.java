@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer.vk;
 
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkImageCreateInfo;
 
@@ -11,7 +12,8 @@ public final class VulkanImage implements AutoCloseable {
     private final int height;
     private final int format;
     private final long handle;
-    private final boolean cleanup;
+    @Nullable
+    private final VulkanMemory memory;
 
     public VulkanImage(VulkanLogicalDevice device, int width, int height, int format, long handle) {
         this.device = device;
@@ -19,15 +21,14 @@ public final class VulkanImage implements AutoCloseable {
         this.width = width;
         this.height = height;
         this.handle = handle;
-        cleanup = false;
+        memory = null;
     }
 
-    public VulkanImage(VulkanLogicalDevice device, int width, int height, int format) {
+    public VulkanImage(VulkanLogicalDevice device, int width, int height, int format, int usage) {
         this.device = device;
         this.format = format;
         this.width = width;
         this.height = height;
-        cleanup = true;
 
         try(var stack = MemoryStack.stackPush()) {
             var imageInfo = VkImageCreateInfo.calloc(stack);
@@ -39,7 +40,7 @@ public final class VulkanImage implements AutoCloseable {
             imageInfo.format(format);
             imageInfo.tiling(VK_IMAGE_TILING_OPTIMAL);
             imageInfo.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
-            imageInfo.usage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+            imageInfo.usage(usage);
             imageInfo.sharingMode(VK_SHARING_MODE_EXCLUSIVE);
             imageInfo.samples(VK_SAMPLE_COUNT_1_BIT);
             imageInfo.flags(0);
@@ -50,6 +51,9 @@ public final class VulkanImage implements AutoCloseable {
                 throw new RuntimeException("Failed to create Vulkan image: " + VulkanUtils.errorString(result));
             }
             handle = texturePointer.get(0);
+
+            memory = VulkanMemory.ofImage(device, this, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            vkBindImageMemory(device.handle(), handle, memory.handle(), 0);
         }
     }
 
@@ -61,10 +65,15 @@ public final class VulkanImage implements AutoCloseable {
         return format;
     }
 
+    public long size() {
+        return memory != null ? memory.size() : 0;
+    }
+
     @Override
     public void close() {
-        if(cleanup) {
+        if(memory != null) {
             vkDestroyImage(device.handle(), handle, VulkanAllocator.get());
+            memory.close();
         }
     }
 }

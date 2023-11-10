@@ -82,8 +82,9 @@ public final class VulkanCommandBuffer implements AutoCloseable {
             beginInfo.renderArea().offset().set(0, 0);
             beginInfo.renderArea().extent().set(extent);
 
-            var clearColor = VkClearValue.calloc(1, stack);
-            clearColor.color().float32().put(new float[]{0, 0, 0, 1});
+            var clearColor = VkClearValue.calloc(2, stack);
+            clearColor.get(0).color().float32().put(new float[]{0, 0, 0, 1});
+            clearColor.get(1).depthStencil().set(1, 0);
             beginInfo.pClearValues(clearColor);
 
             vkCmdBeginRenderPass(handle, beginInfo, VK_SUBPASS_CONTENTS_INLINE);

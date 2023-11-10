@@ -17,6 +17,14 @@ public class VulkanMemory implements AutoCloseable {
     private final long size;
     private final long handle;
 
+    public static VulkanMemory ofImage(VulkanLogicalDevice device, VulkanImage image, int properties) {
+        try(var stack = MemoryStack.stackPush()) {
+            var memoryRequirements = VkMemoryRequirements.calloc(stack);
+            vkGetImageMemoryRequirements(device.handle(), image.handle(), memoryRequirements);
+            return new VulkanMemory(device, memoryRequirements, properties);
+        }
+    }
+
     public VulkanMemory(VulkanLogicalDevice device, VkMemoryRequirements requirements, int properties) {
         this.size = requirements.size();
         this.device = device;

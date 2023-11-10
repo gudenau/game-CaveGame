@@ -1,6 +1,7 @@
 package net.gudenau.cavegame.renderer.vk;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntList;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.*;
 import net.gudenau.cavegame.renderer.shader.Shader;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.VkFormatProperties;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 
 import java.util.*;
@@ -26,7 +28,7 @@ import static org.lwjgl.vulkan.KHRSwapchain.*;
 import static org.lwjgl.vulkan.VK10.*;
 
 public final class VkRenderer implements Renderer {
-    private static final Logger LOGGER = Logger.forName("Vulkan");
+    public static final Logger LOGGER = Logger.forName("Vulkan");
 
     private static final int MAX_FRAMES_IN_FLIGHT = 2;
     private int currentFrame = 0;
@@ -53,6 +55,8 @@ public final class VkRenderer implements Renderer {
     private List<@NotNull VulkanFramebuffer> swapchainFramebuffers;
     @NotNull
     private final VulkanCommandPool commandPool;
+    @NotNull
+    private VulkanDepthBuffer depthBuffer;
     private final List<FrameState> frameState;
     @Nullable
     private FrameState currentFrameState;
@@ -107,12 +111,16 @@ public final class VkRenderer implements Renderer {
             imageViews = swapchain.stream()
                 .map((image) -> new VulkanImageView(logicalDevice, image))
                 .toList();
-            renderPass = new VulkanRenderPass(logicalDevice, swapchain);
+
+            commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
+
+            depthBuffer = new VulkanDepthBuffer(logicalDevice, swapchain);
+
+            renderPass = new VulkanRenderPass(logicalDevice, swapchain, depthBuffer);
 
             swapchainFramebuffers = imageViews.stream()
-                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, extent))
+                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, depthBuffer))
                 .toList();
-            commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
 
             descriptorPool = new VulkanDescriptorPool(
                 logicalDevice,
@@ -129,6 +137,7 @@ public final class VkRenderer implements Renderer {
     }
 
     private void destroySwapChain() {
+        depthBuffer.close();
         swapchainFramebuffers.forEach(VulkanFramebuffer::close);
         imageViews.forEach(VulkanImageView::close);
         swapchain.close();
@@ -145,8 +154,9 @@ public final class VkRenderer implements Renderer {
             imageViews = swapchain.stream()
                 .map((image) -> new VulkanImageView(logicalDevice, image))
                 .toList();
+            depthBuffer = new VulkanDepthBuffer(logicalDevice, swapchain);
             swapchainFramebuffers = imageViews.stream()
-                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, extent))
+                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, depthBuffer))
                 .toList();
         }
     }
@@ -161,9 +171,8 @@ public final class VkRenderer implements Renderer {
 
         frameState.forEach(FrameState::close);
         descriptorPool.close();
-        commandPool.close();
-        //graphicsPipeline.close();
         renderPass.close();
+        commandPool.close();
         logicalDevice.close();
         physicalDevice.close();
         surface.close();

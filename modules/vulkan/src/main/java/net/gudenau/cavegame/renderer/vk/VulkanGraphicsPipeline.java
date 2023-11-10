@@ -185,6 +185,14 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             }
             shaderInfo.clear();
 
+            var depthStencil = VkPipelineDepthStencilStateCreateInfo.calloc(stack);
+            depthStencil.sType$Default();
+            depthStencil.depthTestEnable(true);
+            depthStencil.depthWriteEnable(true);
+            depthStencil.depthCompareOp(VK_COMPARE_OP_LESS);
+            depthStencil.depthBoundsTestEnable(false);
+            depthStencil.stencilTestEnable(false);
+
             var pipelineInfo = VkGraphicsPipelineCreateInfo.calloc(1, stack);
             pipelineInfo.sType$Default();
             pipelineInfo.stageCount(2);
@@ -200,6 +208,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             pipelineInfo.renderPass(renderPass.handle());
             pipelineInfo.subpass(0);
             pipelineInfo.basePipelineHandle(VK_NULL_HANDLE);
+            pipelineInfo.pDepthStencilState(depthStencil);
 
             result = vkCreateGraphicsPipelines(device.handle(), VK_NULL_HANDLE, pipelineInfo, VulkanAllocator.get(), pointer);
             if(result != VK_SUCCESS) {

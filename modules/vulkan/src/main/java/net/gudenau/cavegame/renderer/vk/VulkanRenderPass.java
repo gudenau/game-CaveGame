@@ -12,11 +12,13 @@ public final class VulkanRenderPass implements AutoCloseable {
     private final VulkanLogicalDevice device;
     private final long handle;
 
-    public VulkanRenderPass(@NotNull VulkanLogicalDevice device, @NotNull VulkanSwapchain swapchain) {
+    public VulkanRenderPass(@NotNull VulkanLogicalDevice device, @NotNull VulkanSwapchain swapchain, @NotNull VulkanDepthBuffer depthBuffer) {
         this.device = device;
 
         try(var stack = MemoryStack.stackPush()) {
-            var colorAttachment = VkAttachmentDescription.calloc(1, stack);
+            var attachments = VkAttachmentDescription.calloc(2, stack);
+
+            var colorAttachment = attachments.get(0);
             colorAttachment.format(swapchain.imageFormat());
             colorAttachment.samples(VK_SAMPLE_COUNT_1_BIT);
             colorAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR);
@@ -30,22 +32,46 @@ public final class VulkanRenderPass implements AutoCloseable {
             colorAttachmentRef.attachment(0);
             colorAttachmentRef.layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+            var depthAttachment = attachments.get(1);
+            depthAttachment.format(depthBuffer.image().format());
+            depthAttachment.samples(VK_SAMPLE_COUNT_1_BIT);
+            depthAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR);
+            depthAttachment.storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE);
+            depthAttachment.stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+            depthAttachment.stencilStoreOp(VK_ATTACHMENT_STORE_OP_DONT_CARE);
+            depthAttachment.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+            depthAttachment.finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+            var depthAttachmentRef = VkAttachmentReference.calloc(stack);
+            depthAttachmentRef.attachment(1);
+            depthAttachmentRef.layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
             var subpass = VkSubpassDescription.calloc(1, stack);
             subpass.pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS);
             subpass.colorAttachmentCount(1);
             subpass.pColorAttachments(colorAttachmentRef);
+            subpass.pDepthStencilAttachment(depthAttachmentRef);
 
             var dependency = VkSubpassDependency.calloc(1, stack);
             dependency.srcSubpass(VK_SUBPASS_EXTERNAL);
             dependency.dstSubpass(0);
-            dependency.srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            dependency.srcStageMask(
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+            );
             dependency.srcAccessMask(0);
-            dependency.dstStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-            dependency.dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+            dependency.dstStageMask(
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+            );
+            dependency.dstAccessMask(
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+            );
 
             var renderPassInfo = VkRenderPassCreateInfo.calloc(stack);
             renderPassInfo.sType$Default();
-            renderPassInfo.pAttachments(colorAttachment);
+            renderPassInfo.pAttachments(attachments);
             renderPassInfo.pSubpasses(subpass);
             renderPassInfo.pDependencies(dependency);
 

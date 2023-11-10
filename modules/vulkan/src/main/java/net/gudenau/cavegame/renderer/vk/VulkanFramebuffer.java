@@ -11,16 +11,18 @@ public final class VulkanFramebuffer implements AutoCloseable {
     private final VulkanLogicalDevice device;
     private final long handle;
 
-    public VulkanFramebuffer(@NotNull VulkanLogicalDevice device, @NotNull VulkanSwapchain swapchain, @NotNull VulkanRenderPass renderPass, @NotNull VulkanImageView imageView, @NotNull VkExtent2D extent) {
+    public VulkanFramebuffer(@NotNull VulkanLogicalDevice device, @NotNull VulkanSwapchain swapchain, @NotNull VulkanRenderPass renderPass, @NotNull VulkanImageView imageView, @NotNull VulkanDepthBuffer depthBuffer) {
         this.device = device;
-        extent = swapchain.extent();
+        var extent = swapchain.extent();
 
         try(var stack = MemoryStack.stackPush()) {
             var framebufferInfo = VkFramebufferCreateInfo.calloc(stack);
             framebufferInfo.sType$Default();
             framebufferInfo.renderPass(renderPass.handle());
-            framebufferInfo.attachmentCount(1);
-            framebufferInfo.pAttachments(stack.longs(imageView.handle()));
+            framebufferInfo.pAttachments(stack.longs(
+                imageView.handle(),
+                depthBuffer.view().handle()
+            ));
             framebufferInfo.width(extent.width());
             framebufferInfo.height(extent.height());
             framebufferInfo.layers(1);

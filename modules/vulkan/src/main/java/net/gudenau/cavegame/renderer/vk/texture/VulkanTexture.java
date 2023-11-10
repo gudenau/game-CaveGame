@@ -19,9 +19,7 @@ public final class VulkanTexture implements Texture {
     private final int format;
 
     private final VulkanImage image;
-    private final VulkanMemory memory;
     private final VulkanImageView imageView;
-    private final long size;
 
     private int layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -43,30 +41,21 @@ public final class VulkanTexture implements Texture {
         this.sampler = sampler;
         VulkanCommandPool commandPool = renderer.commandPool();
 
-        try(var stack = MemoryStack.stackPush()) {
-            image = new VulkanImage(device, width, height, format);
+        image = new VulkanImage(device, width, height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-            var memoryRequirements = VkMemoryRequirements.calloc(stack);
-            vkGetImageMemoryRequirements(device.handle(), image.handle(), memoryRequirements);
-            size = memoryRequirements.size();
+        try(var commandBuffer = new VulkanCommandBuffer(device, commandPool)) {
+            commandBuffer.begin();
 
-            memory = new VulkanMemory(device, memoryRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            vkBindImageMemory(device.handle(), image.handle(), memory.handle(), 0);
+            transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            upload(commandBuffer, stagingBuffer);
+            transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-            try(var commandBuffer = new VulkanCommandBuffer(device, commandPool)) {
-                commandBuffer.begin();
-
-                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-                upload(commandBuffer, stagingBuffer);
-                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-                commandBuffer.end();
-                commandBuffer.submit(device.graphicsQueue());
-                vkQueueWaitIdle(device.graphicsQueue());
-            }
-
-            imageView = new VulkanImageView(device, image);
+            commandBuffer.end();
+            commandBuffer.submit(device.graphicsQueue());
+            vkQueueWaitIdle(device.graphicsQueue());
         }
+
+        imageView = new VulkanImageView(device, image);
     }
 
     @NotNull
@@ -140,8 +129,8 @@ public final class VulkanTexture implements Texture {
     }
 
     private void upload(VulkanCommandBuffer commandBuffer, @NotNull VkGraphicsBuffer buffer) {
-        if(buffer.size() != size) {
-            throw new IllegalArgumentException("Buffer was the wrong size; expected " + size + " and got " + buffer.size());
+        if(buffer.size() != image.size()) {
+            throw new IllegalArgumentException("Buffer was the wrong size; expected " + image.size() + " and got " + buffer.size());
         }
 
         //try(var commandBuffer = new VulkanCommandBuffer(device, commandPool)) {
@@ -176,6 +165,5 @@ public final class VulkanTexture implements Texture {
     public void close() {
         imageView.close();
         image.close();
-        memory.close();
     }
 }

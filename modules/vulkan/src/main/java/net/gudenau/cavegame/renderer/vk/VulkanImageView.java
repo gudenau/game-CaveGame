@@ -12,18 +12,18 @@ public final class VulkanImageView implements AutoCloseable {
     private final long handle;
 
     public VulkanImageView(@NotNull VulkanLogicalDevice device, @NotNull VulkanImage image) {
-        this(device, image.handle(), image.format());
+        this(device, image, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
-    public VulkanImageView(@NotNull VulkanLogicalDevice device, long image, int format) {
+    public VulkanImageView(@NotNull VulkanLogicalDevice device, @NotNull VulkanImage image, int aspectFlags) {
         this.device = device;
 
         try(var stack = MemoryStack.stackPush()) {
             var createInfo = VkImageViewCreateInfo.calloc(stack);
             createInfo.sType$Default();
-            createInfo.image(image);
+            createInfo.image(image.handle());
             createInfo.viewType(VK_IMAGE_VIEW_TYPE_2D);
-            createInfo.format(format);
+            createInfo.format(image.format());
             createInfo.components().set(
                 VK_COMPONENT_SWIZZLE_IDENTITY,
                 VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -31,7 +31,7 @@ public final class VulkanImageView implements AutoCloseable {
                 VK_COMPONENT_SWIZZLE_IDENTITY
             );
             createInfo.subresourceRange().set(
-                VK_IMAGE_ASPECT_COLOR_BIT,
+                aspectFlags,
                 0,
                 1,
                 0,
