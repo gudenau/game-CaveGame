@@ -2,7 +2,6 @@ package net.gudenau.cavegame.renderer.vk;
 
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.VkExtent2D;
 import org.lwjgl.vulkan.VkFramebufferCreateInfo;
 
 import static org.lwjgl.vulkan.VK10.*;
@@ -11,7 +10,14 @@ public final class VulkanFramebuffer implements AutoCloseable {
     private final VulkanLogicalDevice device;
     private final long handle;
 
-    public VulkanFramebuffer(@NotNull VulkanLogicalDevice device, @NotNull VulkanSwapchain swapchain, @NotNull VulkanRenderPass renderPass, @NotNull VulkanImageView imageView, @NotNull VulkanDepthBuffer depthBuffer) {
+    public VulkanFramebuffer(
+        @NotNull VulkanLogicalDevice device,
+        @NotNull VulkanSwapchain swapchain,
+        @NotNull VulkanRenderPass renderPass,
+        @NotNull VulkanImageView imageView,
+        @NotNull VulkanImageBuffer depthBuffer,
+        @NotNull VulkanImageBuffer colorBuffer
+    ) {
         this.device = device;
         var extent = swapchain.extent();
 
@@ -20,8 +26,9 @@ public final class VulkanFramebuffer implements AutoCloseable {
             framebufferInfo.sType$Default();
             framebufferInfo.renderPass(renderPass.handle());
             framebufferInfo.pAttachments(stack.longs(
-                imageView.handle(),
-                depthBuffer.view().handle()
+                colorBuffer.view().handle(),
+                depthBuffer.view().handle(),
+                imageView.handle()
             ));
             framebufferInfo.width(extent.width());
             framebufferInfo.height(extent.height());

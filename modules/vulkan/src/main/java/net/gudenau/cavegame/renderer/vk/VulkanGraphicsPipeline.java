@@ -109,7 +109,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
             var multisampling = VkPipelineMultisampleStateCreateInfo.calloc(stack);
             multisampling.sType$Default();
             multisampling.sampleShadingEnable(false);
-            multisampling.rasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
+            multisampling.rasterizationSamples(device.device().maxSampleCount());
 
             var colorBlendAttachment = VkPipelineColorBlendAttachmentState.calloc(1, stack);
             colorBlendAttachment.colorWriteMask(

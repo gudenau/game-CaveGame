@@ -28,6 +28,7 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
     @NotNull
     private final VkPhysicalDeviceFeatures deviceFeatures;
 
+    private final int maxSampleCount;
     private final int rank;
 
     private int graphicsQueue = -1;
@@ -47,9 +48,31 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
         vkGetPhysicalDeviceProperties(device, deviceProperties);
         vkGetPhysicalDeviceFeatures(device, deviceFeatures);
 
+        maxSampleCount = getMaxSampleCount();
         findQueues();
         querySwapChainSupport();
         this.rank = calculateRank();
+    }
+
+    private int getMaxSampleCount() {
+        var limits = deviceProperties.limits();
+        var counts = limits.framebufferColorSampleCounts() & limits.framebufferDepthSampleCounts();
+        var leadingZeros = Integer.numberOfLeadingZeros(counts);
+        if(leadingZeros <= 25) {
+            return VK_SAMPLE_COUNT_64_BIT;
+        }
+        return switch(leadingZeros) {
+            case 26 -> VK_SAMPLE_COUNT_32_BIT;
+            case 27 -> VK_SAMPLE_COUNT_16_BIT;
+            case 28 -> VK_SAMPLE_COUNT_8_BIT;
+            case 29 -> VK_SAMPLE_COUNT_4_BIT;
+            case 30 -> VK_SAMPLE_COUNT_2_BIT;
+            default -> VK_SAMPLE_COUNT_1_BIT;
+        };
+    }
+
+    public int maxSampleCount() {
+        return maxSampleCount;
     }
 
     private void findQueues() {

@@ -3,6 +3,7 @@ package net.gudenau.cavegame.renderer.vk;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkImageCreateInfo;
+import org.lwjgl.vulkan.VkImageFormatProperties;
 
 import static org.lwjgl.vulkan.VK10.*;
 
@@ -27,10 +28,14 @@ public final class VulkanImage implements AutoCloseable {
     }
 
     public VulkanImage(VulkanLogicalDevice device, int width, int height, int format, int usage) {
-        this(device, width, height, format, usage, 1);
+        this(device, width, height, format, usage, 1, VK_SAMPLE_COUNT_1_BIT);
     }
 
     public VulkanImage(VulkanLogicalDevice device, int width, int height, int format, int usage, int mipLevels) {
+        this(device, width, height, format, usage, mipLevels, VK_SAMPLE_COUNT_1_BIT);
+    }
+
+    public VulkanImage(VulkanLogicalDevice device, int width, int height, int format, int usage, int mipLevels, int samples) {
         this.device = device;
         this.format = format;
         this.width = width;
@@ -49,8 +54,11 @@ public final class VulkanImage implements AutoCloseable {
             imageInfo.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
             imageInfo.usage(usage);
             imageInfo.sharingMode(VK_SHARING_MODE_EXCLUSIVE);
-            imageInfo.samples(VK_SAMPLE_COUNT_1_BIT);
+            imageInfo.samples(samples);
             imageInfo.flags(0);
+
+            var props = VkImageFormatProperties.calloc(stack);
+            var result2 = vkGetPhysicalDeviceImageFormatProperties(device.device().device(), imageInfo.format(), imageInfo.imageType(), imageInfo.tiling(), imageInfo.usage(), imageInfo.flags(), props);
 
             var texturePointer = stack.longs(0);
             var result = vkCreateImage(device.handle(), imageInfo, VulkanAllocator.get(), texturePointer);

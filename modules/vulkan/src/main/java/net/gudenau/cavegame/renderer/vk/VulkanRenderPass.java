@@ -12,21 +12,21 @@ public final class VulkanRenderPass implements AutoCloseable {
     private final VulkanLogicalDevice device;
     private final long handle;
 
-    public VulkanRenderPass(@NotNull VulkanLogicalDevice device, @NotNull VulkanSwapchain swapchain, @NotNull VulkanDepthBuffer depthBuffer) {
+    public VulkanRenderPass(@NotNull VulkanLogicalDevice device, @NotNull VulkanSwapchain swapchain, @NotNull VulkanImageBuffer depthBuffer) {
         this.device = device;
 
         try(var stack = MemoryStack.stackPush()) {
-            var attachments = VkAttachmentDescription.calloc(2, stack);
+            var attachments = VkAttachmentDescription.calloc(3, stack);
 
             var colorAttachment = attachments.get(0);
             colorAttachment.format(swapchain.imageFormat());
-            colorAttachment.samples(VK_SAMPLE_COUNT_1_BIT);
+            colorAttachment.samples(device.device().maxSampleCount());
             colorAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR);
             colorAttachment.storeOp(VK_ATTACHMENT_STORE_OP_STORE);
             colorAttachment.stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE);
             colorAttachment.stencilStoreOp(VK_ATTACHMENT_STORE_OP_DONT_CARE);
             colorAttachment.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
-            colorAttachment.finalLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+            colorAttachment.finalLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
             var colorAttachmentRef = VkAttachmentReference.calloc(1, stack);
             colorAttachmentRef.attachment(0);
@@ -34,7 +34,7 @@ public final class VulkanRenderPass implements AutoCloseable {
 
             var depthAttachment = attachments.get(1);
             depthAttachment.format(depthBuffer.image().format());
-            depthAttachment.samples(VK_SAMPLE_COUNT_1_BIT);
+            depthAttachment.samples(device.device().maxSampleCount());
             depthAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR);
             depthAttachment.storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE);
             depthAttachment.stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE);
@@ -46,11 +46,27 @@ public final class VulkanRenderPass implements AutoCloseable {
             depthAttachmentRef.attachment(1);
             depthAttachmentRef.layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
+            var resolveAttachment = attachments.get(2);
+            resolveAttachment.format(swapchain.imageFormat());
+            resolveAttachment.samples(VK_SAMPLE_COUNT_1_BIT);
+            resolveAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+            resolveAttachment.storeOp(VK_ATTACHMENT_STORE_OP_STORE);
+            resolveAttachment.stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+            resolveAttachment.stencilStoreOp(VK_ATTACHMENT_STORE_OP_DONT_CARE);
+            resolveAttachment.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+            resolveAttachment.finalLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+            var resolveAttachmentRefs = VkAttachmentReference.calloc(1, stack);
+            var resolveAttachmentRef = resolveAttachmentRefs.get(0);
+            resolveAttachmentRef.attachment(2);
+            resolveAttachmentRef.layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
             var subpass = VkSubpassDescription.calloc(1, stack);
             subpass.pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS);
             subpass.colorAttachmentCount(1);
             subpass.pColorAttachments(colorAttachmentRef);
             subpass.pDepthStencilAttachment(depthAttachmentRef);
+            subpass.pResolveAttachments(resolveAttachmentRefs);
 
             var dependency = VkSubpassDependency.calloc(1, stack);
             dependency.srcSubpass(VK_SUBPASS_EXTERNAL);

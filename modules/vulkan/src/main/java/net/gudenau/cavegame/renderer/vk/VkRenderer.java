@@ -56,7 +56,9 @@ public final class VkRenderer implements Renderer {
     @NotNull
     private final VulkanCommandPool commandPool;
     @NotNull
-    private VulkanDepthBuffer depthBuffer;
+    private VulkanImageBuffer colorBuffer;
+    @NotNull
+    private VulkanImageBuffer depthBuffer;
     private final List<FrameState> frameState;
     @Nullable
     private FrameState currentFrameState;
@@ -118,12 +120,13 @@ public final class VkRenderer implements Renderer {
 
             commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
 
-            depthBuffer = new VulkanDepthBuffer(logicalDevice, swapchain);
+            colorBuffer = new VulkanImageBuffer(logicalDevice, swapchain, swapchain.imageFormat(), VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+            depthBuffer = new VulkanImageBuffer(logicalDevice, swapchain, findDepthFormat(physicalDevice), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
             renderPass = new VulkanRenderPass(logicalDevice, swapchain, depthBuffer);
 
             swapchainFramebuffers = imageViews.stream()
-                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, depthBuffer))
+                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, depthBuffer, colorBuffer))
                 .toList();
 
             descriptorPool = new VulkanDescriptorPool(
@@ -140,7 +143,24 @@ public final class VkRenderer implements Renderer {
         }
     }
 
+    private int findDepthFormat(VulkanPhysicalDevice device) {
+        try(var stack = MemoryStack.stackPush()) {
+            var props = VkFormatProperties.calloc(stack);
+            var formats = IntList.of(VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT);
+            for(var format : formats) {
+                vkGetPhysicalDeviceFormatProperties(device.device(), format, props);
+
+                if((props.optimalTilingFeatures() & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
+                    return format;
+                }
+            }
+        }
+
+        throw new RuntimeException("Failed to find depth buffer format");
+    }
+
     private void destroySwapChain() {
+        colorBuffer.close();
         depthBuffer.close();
         swapchainFramebuffers.forEach(VulkanFramebuffer::close);
         imageViews.forEach(VulkanImageView::close);
@@ -158,9 +178,10 @@ public final class VkRenderer implements Renderer {
             imageViews = swapchain.stream()
                 .map((image) -> new VulkanImageView(logicalDevice, image))
                 .toList();
-            depthBuffer = new VulkanDepthBuffer(logicalDevice, swapchain);
+            colorBuffer = new VulkanImageBuffer(logicalDevice, swapchain, swapchain.imageFormat(), VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+            depthBuffer = new VulkanImageBuffer(logicalDevice, swapchain, findDepthFormat(physicalDevice), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
             swapchainFramebuffers = imageViews.stream()
-                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, depthBuffer))
+                .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, depthBuffer, colorBuffer))
                 .toList();
         }
     }
