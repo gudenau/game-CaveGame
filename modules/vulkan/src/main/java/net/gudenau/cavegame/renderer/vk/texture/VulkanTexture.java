@@ -25,7 +25,7 @@ public final class VulkanTexture implements Texture {
 
     public VulkanTexture(
         @NotNull VkRenderer renderer,
-        @NotNull VulkanSampler sampler,
+        @NotNull VulkanTextureManager textureManager,
         @NotNull VkGraphicsBuffer stagingBuffer,
         @NotNull PngReader.Result imageResult
     ) {
@@ -37,18 +37,38 @@ public final class VulkanTexture implements Texture {
             case GRAYSCALE -> VK_FORMAT_R8_SRGB;
         };
 
+        int mipLevels = Math.max(1, 31 - Integer.numberOfLeadingZeros(Math.max(width, height)));
+        try(var stack = MemoryStack.stackPush()) {
+            var properties = VkFormatProperties.calloc(stack);
+            vkGetPhysicalDeviceFormatProperties(renderer.physicalDevice().device(), format, properties);
+            if((properties.optimalTilingFeatures() & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) == 0) {
+                mipLevels = 1;
+            }
+        }
+
         device = renderer.logicalDevice();
-        this.sampler = sampler;
+        this.sampler = textureManager.sampler(mipLevels);
         VulkanCommandPool commandPool = renderer.commandPool();
 
-        image = new VulkanImage(device, width, height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        image = new VulkanImage(
+            device,
+            width,
+            height,
+            format,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            mipLevels
+        );
 
         try(var commandBuffer = new VulkanCommandBuffer(device, commandPool)) {
             commandBuffer.begin();
 
             transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             upload(commandBuffer, stagingBuffer);
-            transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            if(mipLevels > 1) {
+                generateMipmaps(commandBuffer);
+            } else {
+                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            }
 
             commandBuffer.end();
             commandBuffer.submit(device.graphicsQueue());
@@ -99,7 +119,7 @@ public final class VulkanTexture implements Texture {
                 barrier.subresourceRange().set(
                     VK_IMAGE_ASPECT_COLOR_BIT,
                     0,
-                    1,
+                    image.mipLevels(),
                     0,
                     1
                 );
@@ -128,9 +148,109 @@ public final class VulkanTexture implements Texture {
         layout = newLayout;
     }
 
+    private void generateMipmaps(VulkanCommandBuffer commandBuffer) {
+        try(var stack = MemoryStack.stackPush()) {
+            var barriers = VkImageMemoryBarrier.calloc(1, stack);
+            var barrier = barriers.get(0);
+            barrier.sType$Default();
+            barrier.image(image.handle());
+            barrier.srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
+            barrier.dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
+            barrier.subresourceRange().set(
+                VK_IMAGE_ASPECT_COLOR_BIT,
+                0,
+                1,
+                0,
+                1
+            );
+
+            var blits = VkImageBlit.calloc(1, stack);
+            var blit = blits.get(0);
+
+            int width = this.width;
+            int height = this.height;
+            for(int i = 1; i < image.mipLevels(); i++) {
+                barrier.subresourceRange().baseMipLevel(i - 1);
+                barrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                barrier.newLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+                barrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT);
+                barrier.dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT);
+                vkCmdPipelineBarrier(
+                    commandBuffer.handle(),
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    0,
+                    null,
+                    null,
+                    barriers
+                );
+
+                blit.srcOffsets(0).set(0, 0, 0);
+                blit.srcOffsets(1).set(width, height, 1);
+                blit.srcSubresource().set(
+                    VK_IMAGE_ASPECT_COLOR_BIT,
+                    i - 1,
+                    0,
+                    1
+                );
+                blit.dstOffsets(0).set(0, 0, 0);
+                blit.dstOffsets(1).set(
+                    width > 1 ? width / 2 : 1,
+                    height > 1 ? height / 2 : 1,
+                    1
+                );
+                blit.dstSubresource().set(
+                    VK_IMAGE_ASPECT_COLOR_BIT,
+                    i,
+                    0,
+                    1
+                );
+                vkCmdBlitImage(
+                    commandBuffer.handle(),
+                    image.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    blits,
+                    VK_FILTER_LINEAR
+                );
+
+                barrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+                barrier.newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                barrier.srcAccessMask(VK_ACCESS_TRANSFER_READ_BIT);
+                barrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT);
+                vkCmdPipelineBarrier(
+                    commandBuffer.handle(),
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    0,
+                    null,
+                    null,
+                    barriers
+                );
+
+                width = Math.max(width / 2, 1);
+                height = Math.max(height / 2, 1);
+            }
+
+            barrier.subresourceRange().baseMipLevel(image.mipLevels() - 1);
+            barrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            barrier.newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            barrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT);
+            barrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT);
+            vkCmdPipelineBarrier(
+                commandBuffer.handle(),
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0,
+                null,
+                null,
+                barriers
+            );
+        }
+    }
+
     private void upload(VulkanCommandBuffer commandBuffer, @NotNull VkGraphicsBuffer buffer) {
-        if(buffer.size() != image.size()) {
-            throw new IllegalArgumentException("Buffer was the wrong size; expected " + image.size() + " and got " + buffer.size());
+        if(buffer.size() > image.size()) {
+            throw new IllegalArgumentException("Buffer was the too large; expected at most " + image.size() + " and got " + buffer.size());
         }
 
         //try(var commandBuffer = new VulkanCommandBuffer(device, commandPool)) {

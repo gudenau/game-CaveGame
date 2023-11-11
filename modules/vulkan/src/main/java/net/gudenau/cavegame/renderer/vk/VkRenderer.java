@@ -64,6 +64,10 @@ public final class VkRenderer implements Renderer {
     private final VulkanDescriptorPool descriptorPool;
     private final VulkanTextureManager textureManager;
 
+    public VulkanPhysicalDevice physicalDevice() {
+        return physicalDevice;
+    }
+
     private record FrameState(
         int index,
         @NotNull VulkanCommandBuffer commandBuffer,

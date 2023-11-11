@@ -33,7 +33,7 @@ public final class VulkanImageView implements AutoCloseable {
             createInfo.subresourceRange().set(
                 aspectFlags,
                 0,
-                1,
+                image.mipLevels(),
                 0,
                 1
             );

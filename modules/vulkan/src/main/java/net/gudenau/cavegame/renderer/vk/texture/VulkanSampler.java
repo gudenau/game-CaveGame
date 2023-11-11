@@ -14,7 +14,7 @@ public final class VulkanSampler implements AutoCloseable {
 
     private final long handle;
 
-    public VulkanSampler(VulkanLogicalDevice device) {
+    public VulkanSampler(VulkanLogicalDevice device, int mipLevels) {
         this.device = device;
 
         try(var stack = MemoryStack.stackPush()) {
@@ -42,7 +42,7 @@ public final class VulkanSampler implements AutoCloseable {
             createInfo.mipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR);
             createInfo.mipLodBias(0);
             createInfo.minLod(0);
-            createInfo.maxLod(0);
+            createInfo.maxLod(mipLevels);
 
             var handlePointer = stack.longs(0);
             var result = VK10.vkCreateSampler(device.handle(), createInfo, VulkanAllocator.get(), handlePointer);

@@ -12,6 +12,7 @@ public final class VulkanImage implements AutoCloseable {
     private final int height;
     private final int format;
     private final long handle;
+    private final int mipLevels;
     @Nullable
     private final VulkanMemory memory;
 
@@ -21,21 +22,27 @@ public final class VulkanImage implements AutoCloseable {
         this.width = width;
         this.height = height;
         this.handle = handle;
+        this.mipLevels = 1;
         memory = null;
     }
 
     public VulkanImage(VulkanLogicalDevice device, int width, int height, int format, int usage) {
+        this(device, width, height, format, usage, 1);
+    }
+
+    public VulkanImage(VulkanLogicalDevice device, int width, int height, int format, int usage, int mipLevels) {
         this.device = device;
         this.format = format;
         this.width = width;
         this.height = height;
+        this.mipLevels = mipLevels;
 
         try(var stack = MemoryStack.stackPush()) {
             var imageInfo = VkImageCreateInfo.calloc(stack);
             imageInfo.sType$Default();
             imageInfo.imageType(VK_IMAGE_TYPE_2D);
             imageInfo.extent().set(width, height, 1);
-            imageInfo.mipLevels(1);
+            imageInfo.mipLevels(mipLevels);
             imageInfo.arrayLayers(1);
             imageInfo.format(format);
             imageInfo.tiling(VK_IMAGE_TILING_OPTIMAL);
@@ -75,5 +82,9 @@ public final class VulkanImage implements AutoCloseable {
             vkDestroyImage(device.handle(), handle, VulkanAllocator.get());
             memory.close();
         }
+    }
+
+    public int mipLevels() {
+        return mipLevels;
     }
 }
