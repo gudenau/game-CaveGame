@@ -6,7 +6,7 @@ module net.gudenau.cavegame.renderer.gl {
 
     requires net.gudenau.cavegame.renderer;
 
-    requires org.jetbrains.annotations;
+    requires static org.jetbrains.annotations;
 
     requires org.lwjgl;
     requires org.lwjgl.glfw;

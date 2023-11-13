@@ -8,7 +8,7 @@ module net.gudenau.cavegame.renderer.vulkan {
     requires net.gudenau.cavegame.logger;
     requires net.gudenau.cavegame.utilities;
 
-    requires org.jetbrains.annotations;
+    requires static org.jetbrains.annotations;
 
     requires it.unimi.dsi.fastutil;
 

@@ -11,7 +11,7 @@ module net.gudenau.cavegame.renderer {
     //FIXME Remove this once PngReader is no longer using AWT
     requires java.desktop;
 
-    requires org.jetbrains.annotations;
+    requires static org.jetbrains.annotations;
 
     requires it.unimi.dsi.fastutil;
 

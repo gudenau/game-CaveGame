@@ -3,7 +3,7 @@ module net.gudenau.cavegame.panama {
 
     requires net.gudenau.cavegame.utilities;
 
-    requires org.jetbrains.annotations;
+    requires static org.jetbrains.annotations;
 
     requires org.lwjgl;
 }

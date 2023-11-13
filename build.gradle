@@ -13,7 +13,7 @@ allprojects {
     }
 
     dependencies {
-        implementation "org.jetbrains:annotations:${project.annotationsVersion}"
+        compileOnly "org.jetbrains:annotations:${project.annotationsVersion}"
 
         if(project.name != 'logger') {
             implementation project(':logger')

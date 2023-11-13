@@ -9,7 +9,7 @@ module net.gudenau.cavegame.utilities {
 
     requires jdk.unsupported;
 
-    requires org.jetbrains.annotations;
+    requires static org.jetbrains.annotations;
 
     requires it.unimi.dsi.fastutil;
 
