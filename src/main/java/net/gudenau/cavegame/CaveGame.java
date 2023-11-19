@@ -39,7 +39,7 @@ public final class CaveGame {
             Configuration.DEBUG_MEMORY_ALLOCATOR.set(true);
             Configuration.DEBUG_STACK.set(true);
         }
-        Logger.level(LogLevel.of(Config.LOG_LEVEL.get()));
+        Logger.level(Config.LOG_LEVEL.get());
 
         GlfwUtils.handoverMain(CaveGame::newMain);
     }

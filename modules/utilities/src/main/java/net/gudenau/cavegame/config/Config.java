@@ -1,5 +1,8 @@
 package net.gudenau.cavegame.config;
 
+import net.gudenau.cavegame.codec.CodecBuilder;
+import net.gudenau.cavegame.logger.LogLevel;
+import net.gudenau.cavegame.util.collection.FastCollectors;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.Platform;
@@ -7,6 +10,7 @@ import org.lwjgl.system.Platform;
 import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * A simple configuration system.
@@ -36,7 +40,7 @@ public final class Config<T> {
     /**
      * The global log level of this program.
      */
-    public static final Config<String> LOG_LEVEL = string("log_level", "debug", TRUE); // TODO Enums?
+    public static final Config<LogLevel> LOG_LEVEL = enumeration("log_level", LogLevel.DEBUG, TRUE);
 
     public static final Config<String> RENDERER = string("renderer", "CaveGameVk", TRUE);
 
@@ -131,6 +135,27 @@ public final class Config<T> {
     @Contract("_, _, _ -> new")
     private static Config<String> string(String name, String value, BooleanSupplier supported) {
         return new Config<>(name, value, Function.identity(), supported);
+    }
+
+    /**
+     * Creates a new enum configuration value.
+     *
+     * @param name The name of the configuration value
+     * @param value The default value
+     * @param supported True if this config option should be exposed
+     * @return The created configuration value
+     */
+    @Contract("_, _, _ -> new")
+    private static <T extends Enum<T>> Config<T> enumeration(String name, T value, BooleanSupplier supported) {
+        return new Config<>(name, value, (string) -> {
+            var values = value.getDeclaringClass().getEnumConstants();
+            for(var element : values) {
+                if(element.name().equalsIgnoreCase(string)) {
+                    return element;
+                }
+            }
+            return value;
+        }, supported);
     }
 
     /**

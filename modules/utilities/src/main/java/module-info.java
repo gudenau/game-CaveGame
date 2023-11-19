@@ -7,6 +7,8 @@ module net.gudenau.cavegame.utilities {
     exports net.gudenau.cavegame.util;
     exports net.gudenau.cavegame.util.collection;
 
+    requires net.gudenau.cavegame.logger;
+
     requires jdk.unsupported;
 
     requires static org.jetbrains.annotations;
