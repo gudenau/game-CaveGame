@@ -54,7 +54,7 @@ public final class VulkanTextureManager implements TextureManager, AutoCloseable
             stagingBuffer = renderer.createBuffer(BufferType.STAGING, pixels.remaining());
             stagingBuffer.upload(pixels);
         } finally {
-            MemoryUtil.memFree(pixels);
+            imageResult.close();
         }
         VulkanTexture texture;
         try {

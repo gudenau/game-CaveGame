@@ -21,7 +21,12 @@ public final class PngReader {
         int height,
         @NotNull TextureFormat format,
         @NotNull ByteBuffer pixels
-    ) {}
+    ) implements AutoCloseable {
+        @Override
+        public void close() {
+            MemoryUtil.memFree(pixels);
+        }
+    }
 
     @NotNull
     public static Result read(@NotNull ByteBuffer fileBuffer, @NotNull TextureFormat format) throws IOException {
