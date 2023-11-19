@@ -21,7 +21,11 @@ public final class GlState {
         if(context == NULL) {
             throw new IllegalStateException("No current GL context");
         }
+        return get(context);
+    }
 
+    @NotNull
+    public static GlState get(long context) {
         var state = LOCK.read(() -> STATE.get(context));
         if(state != null) {
             return state;
@@ -51,5 +55,23 @@ public final class GlState {
         }
 
         return boundProgram;
+    }
+
+    private int boundTexture = 0;
+    public void bindTexture(int texture) {
+        if(boundTexture != texture) {
+            glBindTexture(GL_TEXTURE_2D, texture);
+            this.boundTexture = texture;
+        }
+    }
+
+    public int boundTexture() {
+        if(Checks.CHECKS) {
+            if(boundTexture != glGetInteger(GL_TEXTURE_BINDING_2D)) {
+                throw new IllegalStateException("Cached texture did not match bound texture!");
+            }
+        }
+
+        return boundTexture;
     }
 }

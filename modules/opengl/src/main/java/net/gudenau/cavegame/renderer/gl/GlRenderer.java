@@ -15,6 +15,8 @@ import static org.lwjgl.opengl.GL44.*;
 
 public final class GlRenderer implements Renderer {
     @NotNull
+    private final GlTextureManager textureManager;
+    @NotNull
     private final GlContext primordialContext;
     @NotNull
     private final GlExecutor executor;
@@ -28,8 +30,9 @@ public final class GlRenderer implements Renderer {
         }
         primordialContext = new PrimordialContext(context);
         executor = new GlExecutor(primordialContext);
+        textureManager = new GlTextureManager(executor);
 
-        shader = executor.schedule(() -> {
+        shader = executor.schedule((state) -> {
             try(
                 var vertex = new GlShader(GlShader.Type.VERTEX, new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic"));
                 var fragment = new GlShader(GlShader.Type.FRAGMENT, new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic"))
@@ -88,12 +91,15 @@ public final class GlRenderer implements Renderer {
 
     @Override
     public @NotNull TextureManager textureManager() {
-        throw new UnsupportedOperationException();
+        return textureManager;
     }
 
     @Override
     public void close() {
-        glDeleteVertexArrays(vao);
+        if(vao != 0) {
+            glDeleteVertexArrays(vao);
+        }
+        textureManager.close();
         executor.close();
         primordialContext.close();
     }

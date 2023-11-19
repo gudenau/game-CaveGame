@@ -86,7 +86,7 @@ public final class CaveGame {
                 Map.of("texSampler", texture)
             ));
 
-            BufferBuilder builder = null;
+            BufferBuilder builder;
             try {
                 builder = ObjLoader.load(basicShader.builder(), new Identifier(NAMESPACE, "viking_room"));
             } catch(IOException e) {

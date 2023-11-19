@@ -1,55 +1,89 @@
 package net.gudenau.cavegame.renderer.gl;
 
 import net.gudenau.cavegame.util.ExclusiveLock;
+import net.gudenau.cavegame.util.ThreadPool;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.Stack;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static org.lwjgl.glfw.GLFW.glfwGetCurrentContext;
+import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class GlExecutor implements AutoCloseable {
     @NotNull
     private final ExclusiveLock lock = new ExclusiveLock();
     @NotNull
-    private final Stack<Context> context = new Stack<>();
+    private final Stack<Context> contextStack = new Stack<>();
     @NotNull
     private final GlContext primordialContext;
-    @NotNull
-    private final Executor executor;
 
-    @SuppressWarnings("resource") // Idea is being too sensitive here
     GlExecutor(@NotNull GlContext primordialContext) {
         this.primordialContext = primordialContext;
+    }
 
-        //TODO Make this not garbage, requires virtual thread pinning.
-        executor = (task) -> {
-            var context = lock.lock(() -> this.context.isEmpty() ? new Context(primordialContext) : this.context.pop());
-            try {
-                context.bind();
-                task.run();
-            } finally {
-                context.release();
-                lock.lock(() -> this.context.push(context));
+    @NotNull
+    private Context aquireContext() {
+        var context = lock.lock(() ->
+            contextStack.isEmpty() ?
+                new Context(primordialContext) :
+                contextStack.pop()
+        );
+        context.bind();
+        return context;
+    }
+
+    @SuppressWarnings("resource")
+    private void releaseContext(@NotNull Context context) {
+        context.release();
+        lock.lock(() -> contextStack.push(context));
+    }
+
+    @NotNull
+    public CompletableFuture<Void> schedule(@NotNull Consumer<GlState> task) {
+        return ThreadPool.future(() -> run(task));
+    }
+
+    @NotNull
+    public <T> CompletableFuture<T> schedule(@NotNull Function<GlState, T> task) {
+        return ThreadPool.future(() -> run(task));
+    }
+
+    private void run(@NotNull Consumer<GlState> task) {
+        run((Function<GlState, Void>)(state) -> {
+            task.accept(state);
+            return null;
+        });
+    }
+
+    public <T> T run(@NotNull Function<GlState, T> action) {
+        Context context;
+        var handle = glfwGetCurrentContext();
+        if(handle == NULL) {
+            context = aquireContext();
+            handle = context.handle();
+        } else {
+            context = null;
+        }
+        try {
+            return action.apply(GlState.get(handle));
+        } finally {
+            if(context != null) {
+                releaseContext(context);
             }
-        };
-    }
-
-    @NotNull
-    public CompletableFuture<Void> schedule(@NotNull Runnable task) {
-        return CompletableFuture.runAsync(task, executor);
-    }
-
-    @NotNull
-    public <T> CompletableFuture<T> schedule(@NotNull Supplier<T> task) {
-        return CompletableFuture.supplyAsync(task, executor);
+        }
     }
 
     @Override
     public void close() {
         lock.lock(() -> {
-            context.forEach(GlContext::close);
-            context.clear();
+            contextStack.forEach(GlContext::close);
+            contextStack.clear();
         });
     }
 

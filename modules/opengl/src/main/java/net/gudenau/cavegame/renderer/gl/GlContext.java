@@ -1,9 +1,13 @@
 package net.gudenau.cavegame.renderer.gl;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.GlfwWindow;
+import net.gudenau.cavegame.util.SharedLock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL;
