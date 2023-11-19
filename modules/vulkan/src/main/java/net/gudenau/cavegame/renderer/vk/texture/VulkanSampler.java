@@ -21,7 +21,7 @@ public final class VulkanSampler implements AutoCloseable {
             var createInfo = VkSamplerCreateInfo.calloc(stack);
             createInfo.sType$Default();
             createInfo.magFilter(VK_FILTER_NEAREST);
-            createInfo.magFilter(VK_FILTER_LINEAR);
+            createInfo.minFilter(VK_FILTER_LINEAR);
             createInfo.addressModeU(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
             createInfo.addressModeV(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
             createInfo.addressModeW(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
