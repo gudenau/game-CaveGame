@@ -15,6 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFW.glfwMakeContextCurrent;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class GlfwUtils {
@@ -28,7 +29,14 @@ public final class GlfwUtils {
     }
 
     public static void handoverMain(@NotNull Runnable newMain) {
-        LOGGER.debug("Initializing GLFW...");
+        try(var stack = MemoryStack.stackPush()) {
+            var major = stack.ints(0);
+            var minor = stack.ints(0);
+            var revision = stack.ints(0);
+            glfwGetVersion(major, minor, revision);
+            LOGGER.debug("Initializing GLFW v" + major.get(0) + '.' + minor.get(0) + '.' + revision.get(0) + "...");
+        }
+
         //noinspection resource
         glfwSetErrorCallback((error, description) -> LOGGER.error(glfwError(error, description)));
 
@@ -100,10 +108,29 @@ public final class GlfwUtils {
 
     @NotNull
     private static String glfwError(int error, long description) {
+        var errorName = switch(error) {
+            case GLFW_NO_ERROR -> "GLFW_NO_ERROR";
+            case GLFW_NOT_INITIALIZED -> "GLFW_NOT_INITIALIZED";
+            case GLFW_NO_CURRENT_CONTEXT -> "GLFW_NO_CURRENT_CONTEXT";
+            case GLFW_INVALID_ENUM -> "GLFW_INVALID_ENUM";
+            case GLFW_INVALID_VALUE -> "GLFW_INVALID_VALUE";
+            case GLFW_OUT_OF_MEMORY -> "GLFW_OUT_OF_MEMORY";
+            case GLFW_API_UNAVAILABLE -> "GLFW_API_UNAVAILABLE";
+            case GLFW_VERSION_UNAVAILABLE -> "GLFW_VERSION_UNAVAILABLE";
+            case GLFW_PLATFORM_ERROR -> "GLFW_PLATFORM_ERROR";
+            case GLFW_FORMAT_UNAVAILABLE -> "GLFW_FORMAT_UNAVAILABLE";
+            case GLFW_NO_WINDOW_CONTEXT -> "GLFW_NO_WINDOW_CONTEXT";
+            case GLFW_CURSOR_UNAVAILABLE -> "GLFW_CURSOR_UNAVAILABLE";
+            case GLFW_FEATURE_UNAVAILABLE -> "GLFW_FEATURE_UNAVAILABLE";
+            case GLFW_FEATURE_UNIMPLEMENTED -> "GLFW_FEATURE_UNIMPLEMENTED";
+            case GLFW_PLATFORM_UNAVAILABLE -> "GLFW_PLATFORM_UNAVAILABLE";
+            default -> "UNKNOWN (" + error + ')';
+        };
+
         if(description != NULL) {
-            return MemoryUtil.memUTF8(description) + " (" + error + ")";
+            return errorName + ": " + MemoryUtil.memUTF8(description);
         } else {
-            return Integer.toString(error);
+            return errorName;
         }
     }
 
