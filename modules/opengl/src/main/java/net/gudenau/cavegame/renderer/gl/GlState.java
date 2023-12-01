@@ -74,4 +74,22 @@ public final class GlState {
 
         return boundTexture;
     }
+
+    private int boundBuffer = 0;
+    public void bindBuffer(int handle) {
+        if(this.boundBuffer != handle) {
+            glBindBuffer(GL_ARRAY_BUFFER, handle);
+            this.boundBuffer = handle;
+        }
+    }
+
+    public int boundBuffer() {
+        if(Checks.CHECKS) {
+            if(boundBuffer != glGetInteger(GL_ARRAY_BUFFER_BINDING)) {
+                throw new IllegalStateException("Cached buffer did not match bound buffer!");
+            }
+        }
+
+        return boundBuffer;
+    }
 }

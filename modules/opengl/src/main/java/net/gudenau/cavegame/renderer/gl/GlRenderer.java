@@ -8,7 +8,6 @@ import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.renderer.texture.TextureManager;
 import net.gudenau.cavegame.resource.Identifier;
-import net.gudenau.cavegame.util.collection.FastCollectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -69,7 +68,7 @@ public final class GlRenderer implements Renderer {
             metadata = result.getResult();
         }
 
-        return executor.run((state) -> {
+        return executor.get((state) -> {
             var shaders = new HashMap<GlShader.Type, GlShader>();
             GlProgram program;
             try {
@@ -105,8 +104,8 @@ public final class GlRenderer implements Renderer {
 
     @NotNull
     @Override
-    public GraphicsBuffer createBuffer(@NotNull BufferType type, int size) {
-        throw new UnsupportedOperationException();
+    public GlGraphicsBuffer createBuffer(@NotNull BufferType type, int size) {
+        return new GlGraphicsBuffer(executor, type, size);
     }
 
     @Override

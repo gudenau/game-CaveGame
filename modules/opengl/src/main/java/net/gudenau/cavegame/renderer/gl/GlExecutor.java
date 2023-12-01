@@ -3,14 +3,11 @@ package net.gudenau.cavegame.renderer.gl;
 import net.gudenau.cavegame.util.ExclusiveLock;
 import net.gudenau.cavegame.util.ThreadPool;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Stack;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.glfwGetCurrentContext;
 import static org.lwjgl.system.MemoryUtil.NULL;
@@ -51,17 +48,17 @@ public final class GlExecutor implements AutoCloseable {
 
     @NotNull
     public <T> CompletableFuture<T> schedule(@NotNull Function<GlState, T> task) {
-        return ThreadPool.future(() -> run(task));
+        return ThreadPool.future(() -> get(task));
     }
 
-    private void run(@NotNull Consumer<GlState> task) {
-        run((Function<GlState, Void>)(state) -> {
+    public void run(@NotNull Consumer<GlState> task) {
+        get((Function<GlState, Void>)(state) -> {
             task.accept(state);
             return null;
         });
     }
 
-    public <T> T run(@NotNull Function<GlState, T> action) {
+    public <T> T get(@NotNull Function<GlState, T> action) {
         Context context;
         var handle = glfwGetCurrentContext();
         if(handle == NULL) {

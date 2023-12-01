@@ -34,7 +34,7 @@ public final class GlTextureManager implements AutoCloseable, TextureManager {
         }
         GlTexture texture;
         try {
-            texture = executor.run((state) -> new GlTexture(state, result));
+            texture = executor.get((state) -> new GlTexture(state, result));
         } finally {
             result.close();
         }

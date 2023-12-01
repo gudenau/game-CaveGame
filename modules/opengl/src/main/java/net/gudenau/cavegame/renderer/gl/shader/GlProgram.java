@@ -90,7 +90,7 @@ public final class GlProgram implements Shader {
     public BufferBuilder builder() {
         return BufferBuilder.create(this, (data, type) -> {
             var buffer = renderer.createBuffer(type, data.remaining());
-            //TODO buffer.shader(this);
+            buffer.shader(this);
             buffer.upload(data);
             return buffer;
         });
