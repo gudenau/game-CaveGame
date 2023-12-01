@@ -24,8 +24,6 @@ public final class VkVertexFormat implements VertexFormat {
         VertexAttribute position = null;
         VertexAttribute textureCoord = null;
 
-        var inputs = new ArrayList<>(vertex.inputs());
-        inputs.sort(Comparator.comparingInt(VulkanShaderModule.Resource::location));
         for(var input : vertex.inputs()) {
             var name = input.name();
             var meta = metadata.get(name);
