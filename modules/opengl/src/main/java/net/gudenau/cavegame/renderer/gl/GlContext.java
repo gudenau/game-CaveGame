@@ -1,13 +1,9 @@
 package net.gudenau.cavegame.renderer.gl;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.GlfwWindow;
-import net.gudenau.cavegame.util.SharedLock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL;
@@ -16,7 +12,7 @@ import org.lwjgl.opengl.GLDebugMessageCallback;
 import org.lwjgl.system.MemoryUtil;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.opengl.GL44.*;
+import static org.lwjgl.opengl.GL44C.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public sealed class GlContext extends GlfwWindow permits GlExecutor.Context, GlRenderer.PrimordialContext, GlWindow {
@@ -31,7 +27,7 @@ public sealed class GlContext extends GlfwWindow permits GlExecutor.Context, GlR
             default -> LogLevel.INFO;
         };
 
-        LOGGER.log(level, MemoryUtil.memUTF8(message, length), new Throwable());
+        LOGGER.log(level, MemoryUtil.memUTF8(message, length));
     });
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(DEBUG_CALLBACK::close, "GlContext Debug Cleanup"));

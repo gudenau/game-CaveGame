@@ -1,17 +1,23 @@
 package net.gudenau.cavegame.renderer.gl;
 
 import net.gudenau.cavegame.renderer.*;
+import net.gudenau.cavegame.renderer.gl.shader.GlProgram;
+import net.gudenau.cavegame.renderer.gl.shader.GlShader;
 import net.gudenau.cavegame.renderer.shader.Shader;
+import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.renderer.texture.TextureManager;
 import net.gudenau.cavegame.resource.Identifier;
+import net.gudenau.cavegame.util.collection.FastCollectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import static org.lwjgl.opengl.GL44.*;
+import static org.lwjgl.opengl.GL44C.*;
 
 public final class GlRenderer implements Renderer {
     @NotNull
@@ -20,8 +26,6 @@ public final class GlRenderer implements Renderer {
     private final GlContext primordialContext;
     @NotNull
     private final GlExecutor executor;
-    @NotNull
-    private final GlProgram shader;
     private int vao = 0;
 
     public GlRenderer(Window window) {
@@ -31,17 +35,6 @@ public final class GlRenderer implements Renderer {
         primordialContext = new PrimordialContext(context);
         executor = new GlExecutor(primordialContext);
         textureManager = new GlTextureManager(executor);
-
-        shader = executor.schedule((state) -> {
-            try(
-                var vertex = new GlShader(GlShader.Type.VERTEX, new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic"));
-                var fragment = new GlShader(GlShader.Type.FRAGMENT, new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic"))
-            ) {
-                return new GlProgram(vertex, fragment);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }).join();
     }
 
     @Override
@@ -56,16 +49,58 @@ public final class GlRenderer implements Renderer {
 
         glBindVertexArray(vao);
 
-        shader.bind();
+        //shader.bind();
         glDrawArrays(GL_TRIANGLES, 0, 3);
-        shader.release();
+        //shader.release();
 
         glBindVertexArray(0);
     }
 
+    //TODO Move this code somewhere else
     @Override
     public Shader loadShader(@NotNull Identifier identifier, @NotNull Map<String, Texture> textures) {
-        throw new UnsupportedOperationException();
+        ShaderMeta metadata;
+        {
+            var result = ShaderMeta.load(identifier);
+            var partial = result.partial();
+            if (partial.isPresent()) {
+                throw new RuntimeException("Failed to load shader metadata for " + identifier + '\n' + partial.get().error());
+            }
+            metadata = result.getResult();
+        }
+
+        return executor.run((state) -> {
+            var shaders = new HashMap<GlShader.Type, GlShader>();
+            GlProgram program;
+            try {
+                var required = new HashSet<>(GlShader.Type.REQUIRED);
+                metadata.shaders().forEach((type, info) -> {
+                    var glType = switch(type) {
+                        case VERTEX -> GlShader.Type.VERTEX;
+                        case FRAGMENT -> GlShader.Type.FRAGMENT;
+                    };
+                    required.remove(glType);
+                    shaders.put(glType, new GlShader(
+                        glType,
+                        info.files().get("opengl")
+                    ));
+                });
+                if(!required.isEmpty()) {
+                    throw new RuntimeException(
+                        "Failed to load shader, required shaders where missing: " +
+                            required.stream()
+                                .map((missing) -> missing.name().toLowerCase())
+                                .collect(Collectors.joining(", "))
+                    );
+                }
+
+                program = new GlProgram(this, identifier, textures, shaders.values(), metadata);
+            } finally {
+                shaders.values().forEach(GlShader::close);
+            }
+
+            return program;
+        });
     }
 
     @NotNull

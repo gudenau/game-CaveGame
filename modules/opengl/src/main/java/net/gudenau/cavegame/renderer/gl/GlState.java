@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.Checks;
 
-import static org.lwjgl.opengl.GL33.*;
+import static org.lwjgl.opengl.GL33C.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 //TODO Make this actually cache state.

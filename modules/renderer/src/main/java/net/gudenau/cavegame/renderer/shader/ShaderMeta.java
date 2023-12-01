@@ -51,7 +51,7 @@ public record ShaderMeta(
     }
 
     public record Attribute(
-        @Optional @Nullable AttributeUsage usage
+        @Required @NotNull AttributeUsage usage
     ) {
         public static final Codec<Attribute> CODEC = CodecBuilder.record(Attribute.class);
     }

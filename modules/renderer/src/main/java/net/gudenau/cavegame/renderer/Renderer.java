@@ -14,6 +14,7 @@ public interface Renderer extends AutoCloseable {
 
     void draw();
 
+    //TODO This should have it's own manager
     Shader loadShader(@NotNull Identifier identifier, @NotNull Map<String, Texture> textures);
 
     @NotNull
