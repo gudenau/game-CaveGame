@@ -8,6 +8,9 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.system.Platform;
 
+import java.lang.foreign.FunctionDescriptor;
+import java.lang.foreign.Linker;
+import java.lang.foreign.ValueLayout;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -61,7 +64,7 @@ public final class GlfwUtils {
                 newMain.run();
             } finally {
                 running = false;
-                glfwThread.interrupt();
+                JOBS.add(() -> {});
             }
         }, "main").start());
 
@@ -70,15 +73,21 @@ public final class GlfwUtils {
             try {
                 job = JOBS.take();
             } catch (InterruptedException e) {
-                if(running) {
-                    LOGGER.warn("GLFW thread interrupted while still running, ignoring...", e);
-                }
+                LOGGER.error("GLFW thread interrupted while running a job", e);
                 continue;
             }
             try {
                 job.run();
             } catch (Throwable e) {
                 LOGGER.error("GLFW task threw an unexpected exception", e);
+            }
+        }
+
+        while(!JOBS.isEmpty()) {
+            try {
+                JOBS.take().run();
+            } catch(Throwable e) {
+                LOGGER.error("Failed to execute job while flushing", e);
             }
         }
 
@@ -90,11 +99,17 @@ public final class GlfwUtils {
 
     public static CompletableFuture<Void> invokeLater(@NotNull Runnable task) {
         Objects.requireNonNull(task, "task can't be null");
+        if(!running) {
+            throw new IllegalStateException("GLFW is shutting down");
+        }
         return CompletableFuture.runAsync(task, JOBS::add);
     }
 
     public static <T> CompletableFuture<T> invokeLater(@NotNull Supplier<T> task) {
         Objects.requireNonNull(task, "task can't be null");
+        if(!running) {
+            throw new IllegalStateException("GLFW is shutting down");
+        }
         return CompletableFuture.supplyAsync(task, JOBS::add);
     }
 

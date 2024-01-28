@@ -49,6 +49,11 @@ public final class Config<T> {
      */
     public static final Config<Boolean> FORCE_X = bool("force_x", false, () -> Platform.get() == Platform.LINUX);
 
+    /**
+     * Sets the minimum level for GL messages.
+     */
+    public static final Config<LogLevel> GL_LOG_LEVEL = enumeration("gl_log_level", LogLevel.INFO, TRUE);
+
     static {
         // Check system props for any matching values
         CONFIGURATION.stream()

@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.gudenau.cavegame.renderer.BufferBuilder;
 import net.gudenau.cavegame.renderer.gl.GlRenderer;
 import net.gudenau.cavegame.renderer.gl.GlState;
+import net.gudenau.cavegame.renderer.gl.GlTexture;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.renderer.shader.VertexFormat;
@@ -26,13 +27,14 @@ import java.util.stream.IntStream;
 
 import static org.lwjgl.opengl.GL33C.*;
 
+//FIXME Fix this junk
 public final class GlProgram implements Shader {
     private final GlRenderer renderer;
     private final int handle;
     private final Map<String, Attribute> attributes;
     private final Map<String, Uniform> uniforms;
     private final GlVertexFormat format;
-    private final Int2ObjectMap<Texture> textureBindings;
+    private final Int2ObjectMap<GlTexture> textureBindings;
 
     public GlProgram(GlRenderer renderer, @NotNull Identifier identifier, @NotNull Map<String, Texture> textures, @NotNull Collection<@NotNull GlShader> shaders, ShaderMeta metadata) {
         this.renderer = renderer;
@@ -50,7 +52,7 @@ public final class GlProgram implements Shader {
 
         this.attributes = getAttributes();
         uniforms = getUniforms();
-        format = new GlVertexFormat(this.attributes, metadata.attributes());
+        format = renderer.executor().get((state) -> new GlVertexFormat(state, this.attributes, metadata.attributes()));
 
         var samplers = uniforms.entrySet().stream()
             .filter((entry) -> entry.getValue().type() == GL_SAMPLER_2D)
@@ -65,16 +67,23 @@ public final class GlProgram implements Shader {
 
         textureBindings = samplers.entrySet().stream().collect(FastCollectors.toInt2ObjectMap(
             (entry) -> entry.getValue().binding(),
-            (entry) -> textures.get(entry.getKey())
+            (entry) -> (GlTexture) textures.get(entry.getKey())
         ));
     }
 
     public void bind() {
-        GlState.get().bindProgram(handle);
+        var state = GlState.get();
+        state.bindProgram(handle);
+        format.bind(state);
+        textureBindings.forEach((binding, texture) -> {
+            state.activeTexture(GL_TEXTURE0 + binding);
+            state.bindTexture(texture.handle());
+        });
     }
 
     public void release() {
         var state = GlState.get();
+        format.release(state);
         if(state.boundProgram() == handle) {
             state.bindProgram(0);
         }
@@ -97,7 +106,7 @@ public final class GlProgram implements Shader {
     }
 
     @Override
-    public VertexFormat format() {
+    public GlVertexFormat format() {
         return format;
     }
 
@@ -160,7 +169,8 @@ public final class GlProgram implements Shader {
             glGetUniformIndices(handle, stack.pointers(names.stream().map(stack::UTF8).toArray(ByteBuffer[]::new)), indices);
 
             // TODO This is awful, find a better way
-            bind();
+            var state = GlState.get();
+            state.bindProgram(handle);
             try {
                 var bindingsByType = new Int2IntOpenHashMap();
                 for(int i = 0; i < limit; i++) {
@@ -169,7 +179,7 @@ public final class GlProgram implements Shader {
                     bindings.add(binding);
                 }
             } finally {
-                release();
+                state.bindProgram(0);
             }
 
             return IntStream.range(0, limit).mapToObj((index) -> new Uniform(

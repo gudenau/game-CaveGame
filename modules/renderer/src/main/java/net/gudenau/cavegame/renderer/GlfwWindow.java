@@ -2,6 +2,7 @@ package net.gudenau.cavegame.renderer;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.Objects;
@@ -12,6 +13,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public abstract class GlfwWindow implements Window {
 
     private boolean visible = false;
+    private final GLFWFramebufferSizeCallback glfwResizeCallback;
     @Nullable
     private ResizeCallback resizeCallback = null;
 
@@ -20,12 +22,12 @@ public abstract class GlfwWindow implements Window {
     protected GlfwWindow(@NotNull String title, int width, int height, @Nullable Object user) {
         Objects.requireNonNull(title, "title can't be null");
 
+        glfwResizeCallback = GLFWFramebufferSizeCallback.create(this::resizeCallback);
+
         handle = GlfwUtils.invokeAndWait(() -> {
             var result = createWindow(title, width, height, user);
             if(result != NULL) {
-                // Idea is wrong here, weird usage of AutoClosable
-                //noinspection resource
-                glfwSetFramebufferSizeCallback(result, this::resizeCallback);
+                glfwSetFramebufferSizeCallback(result, glfwResizeCallback);
             }
             return result;
         });
@@ -114,11 +116,11 @@ public abstract class GlfwWindow implements Window {
 
     @Override
     public void close() {
-        GlfwUtils.invokeLater(() -> {
-            // Idea is wrong here, weird usage of AutoClosable and nullable stuff
-            //noinspection resource,DataFlowIssue
-            glfwSetFramebufferSizeCallback(handle, null).free();
+        GlfwUtils.invokeAndWait(() -> {
+            //noinspection resource
+            glfwSetFramebufferSizeCallback(handle, null);
             glfwDestroyWindow(handle);
+            glfwResizeCallback.free();
         });
     }
 }

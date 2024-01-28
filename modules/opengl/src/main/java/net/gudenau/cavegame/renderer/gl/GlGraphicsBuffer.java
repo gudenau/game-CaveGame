@@ -29,16 +29,20 @@ public final class GlGraphicsBuffer implements GraphicsBuffer {
     @Override
     public void upload(@NotNull ByteBuffer data) {
         executor.run((state) -> {
-            state.bindBuffer(handle);
+            int type = switch(this.type) {
+                case VERTEX, UNIFORM, STAGING -> GL_ARRAY_BUFFER;
+                case INDEX -> GL_ELEMENT_ARRAY_BUFFER;
+            };
+            state.bindBuffer(type, handle);
             var limit = data.limit();
             try {
                 data.limit(size + data.position());
-                glBufferData(GL_ARRAY_BUFFER, data, switch(type) {
+                glBufferData(type, data, switch(this.type) {
                     case VERTEX, UNIFORM, INDEX -> GL_STATIC_DRAW;
                     case STAGING -> GL_STREAM_DRAW;
                 });
             } finally {
-                state.bindBuffer(0);
+                state.bindBuffer(type, 0);
                 data.limit(limit);
             }
         });
@@ -56,5 +60,9 @@ public final class GlGraphicsBuffer implements GraphicsBuffer {
 
     public void shader(@NotNull GlProgram shader) {
         this.shader = shader;
+    }
+
+    public int handle() {
+        return handle;
     }
 }

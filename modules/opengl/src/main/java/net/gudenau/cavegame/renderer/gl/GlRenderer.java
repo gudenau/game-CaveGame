@@ -3,6 +3,7 @@ package net.gudenau.cavegame.renderer.gl;
 import net.gudenau.cavegame.renderer.*;
 import net.gudenau.cavegame.renderer.gl.shader.GlProgram;
 import net.gudenau.cavegame.renderer.gl.shader.GlShader;
+import net.gudenau.cavegame.renderer.gl.shader.GlVertexFormat;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.renderer.texture.Texture;
@@ -25,7 +26,6 @@ public final class GlRenderer implements Renderer {
     private final GlContext primordialContext;
     @NotNull
     private final GlExecutor executor;
-    private int vao = 0;
 
     public GlRenderer(Window window) {
         if(!(window instanceof GlContext context)) {
@@ -40,19 +40,6 @@ public final class GlRenderer implements Renderer {
     public void draw() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0, 0, 0, 1);
-
-        //TODO These are per-context...
-        if(vao == 0) {
-            vao = glGenVertexArrays();
-        }
-
-        glBindVertexArray(vao);
-
-        //shader.bind();
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-        //shader.release();
-
-        glBindVertexArray(0);
     }
 
     //TODO Move this code somewhere else
@@ -110,17 +97,34 @@ public final class GlRenderer implements Renderer {
 
     @Override
     public void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer) {
-        throw new UnsupportedOperationException();
+        var shader = (GlProgram) vertexBuffer.shader();
+        if(indexBuffer != null && indexBuffer.shader() != shader) {
+            throw new IllegalArgumentException("vertexBuffer and indexBuffer where for different shaders");
+        }
+
+        executor.run((state) -> {
+            state.bindBuffer(GL_ARRAY_BUFFER, ((GlGraphicsBuffer) vertexBuffer).handle());
+            if(indexBuffer != null) {
+                state.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ((GlGraphicsBuffer) indexBuffer).handle());
+            }
+
+            shader.bind();
+
+            glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+
+            state.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+            state.bindBuffer(GL_ARRAY_BUFFER, 0);
+        });
     }
 
     @Override
     public void begin() {
-        throw new UnsupportedOperationException();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     @Override
     public void waitForIdle() {
-        throw new UnsupportedOperationException();
+        glFinish();
     }
 
     @Override
@@ -130,12 +134,14 @@ public final class GlRenderer implements Renderer {
 
     @Override
     public void close() {
-        if(vao != 0) {
-            glDeleteVertexArrays(vao);
-        }
         textureManager.close();
         executor.close();
         primordialContext.close();
+    }
+
+    @NotNull
+    public GlExecutor executor() {
+        return executor;
     }
 
     public static final class PrimordialContext extends GlContext {

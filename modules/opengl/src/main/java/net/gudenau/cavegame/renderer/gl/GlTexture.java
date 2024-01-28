@@ -15,8 +15,8 @@ public class GlTexture implements Texture {
         try {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             var glFormat = switch(result.format()) {
                 case RGBA -> GL_RGBA;
                 case RGB -> GL_RGB;
@@ -32,5 +32,9 @@ public class GlTexture implements Texture {
     @Override
     public void close() {
         glDeleteTextures(handle);
+    }
+
+    public int handle() {
+        return handle;
     }
 }

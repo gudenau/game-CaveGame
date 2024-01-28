@@ -57,39 +57,97 @@ public final class GlState {
         return boundProgram;
     }
 
-    private int boundTexture = 0;
+    private int activeTexture = GL_TEXTURE0;
+    public void activeTexture(int texture) {
+        if(texture < GL_TEXTURE0 || texture > GL_TEXTURE31) {
+            throw new IllegalArgumentException("Bad texture " + texture);
+        }
+        if(texture != activeTexture) {
+            glActiveTexture(texture);
+            activeTexture = texture;
+        }
+    }
+
+    public int activeTexture() {
+        return activeTexture;
+    }
+
+    private static final int BOUND_TEXTURE_COUNT = GL_TEXTURE31 - GL_TEXTURE0;
+    private final int[] boundTextures = new int[BOUND_TEXTURE_COUNT];
     public void bindTexture(int texture) {
-        if(boundTexture != texture) {
+        var active = activeTexture - GL_TEXTURE0;
+        if(boundTextures[active] != texture) {
             glBindTexture(GL_TEXTURE_2D, texture);
-            this.boundTexture = texture;
+            boundTextures[active] = texture;
         }
     }
 
     public int boundTexture() {
+        var active = activeTexture - GL_TEXTURE0;
         if(Checks.CHECKS) {
-            if(boundTexture != glGetInteger(GL_TEXTURE_BINDING_2D)) {
+            if(boundTextures[active] != glGetInteger(GL_TEXTURE_BINDING_2D)) {
                 throw new IllegalStateException("Cached texture did not match bound texture!");
             }
         }
 
-        return boundTexture;
+        return boundTextures[active];
     }
 
-    private int boundBuffer = 0;
-    public void bindBuffer(int handle) {
-        if(this.boundBuffer != handle) {
-            glBindBuffer(GL_ARRAY_BUFFER, handle);
-            this.boundBuffer = handle;
-        }
-    }
+    private int boundArrayBuffer = 0;
+    private int boundElementBuffer = 0;
 
-    public int boundBuffer() {
-        if(Checks.CHECKS) {
-            if(boundBuffer != glGetInteger(GL_ARRAY_BUFFER_BINDING)) {
-                throw new IllegalStateException("Cached buffer did not match bound buffer!");
+    public void bindBuffer(int type, int handle) {
+        switch(type) {
+            case GL_ARRAY_BUFFER -> {
+                if(this.boundArrayBuffer != handle) {
+                    glBindBuffer(GL_ARRAY_BUFFER, handle);
+                    this.boundArrayBuffer = handle;
+                }
             }
+            case GL_ELEMENT_ARRAY_BUFFER -> {
+                if(this.boundElementBuffer != handle) {
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle);
+                    this.boundElementBuffer = handle;
+                }
+            }
+            default -> throw new IllegalArgumentException("Unknown buffer type: " + Integer.toHexString(type));
         }
+    }
 
-        return boundBuffer;
+    public int boundBuffer(int type) {
+        return switch(type) {
+            case GL_ARRAY_BUFFER -> {
+                if(Checks.CHECKS) {
+                    if(boundArrayBuffer != glGetInteger(GL_ARRAY_BUFFER_BINDING)) {
+                        throw new IllegalStateException("Cached array buffer did not match bound buffer!");
+                    }
+                }
+
+                yield boundArrayBuffer;
+            }
+            case GL_ELEMENT_ARRAY_BUFFER -> {
+                if(Checks.CHECKS) {
+                    if(boundArrayBuffer != glGetInteger(GL_ELEMENT_ARRAY_BUFFER_BINDING)) {
+                        throw new IllegalStateException("Cached element buffer did not match bound buffer!");
+                    }
+                }
+
+                yield boundArrayBuffer;
+            }
+            default -> throw new IllegalArgumentException("Unknown buffer type: " + Integer.toHexString(type));
+        };
+    }
+
+    private int boundVao;
+
+    public void bindVao(int vao) {
+        if(boundVao != vao) {
+            glBindVertexArray(vao);
+            boundVao = vao;
+        }
+    }
+
+    public int boundVao() {
+        return boundVao;
     }
 }

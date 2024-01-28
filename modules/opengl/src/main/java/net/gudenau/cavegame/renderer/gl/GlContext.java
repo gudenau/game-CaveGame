@@ -4,6 +4,7 @@ import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.GlfwWindow;
+import net.gudenau.cavegame.util.Treachery;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL;
@@ -18,8 +19,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public sealed class GlContext extends GlfwWindow permits GlExecutor.Context, GlRenderer.PrimordialContext, GlWindow {
     private static final Logger LOGGER = Logger.forName("OpenGL");
 
-    // There is a LWJGL race condition involving this, if LWJGL says this isn't freed it is lying.
-    private static final GLDebugMessageCallback DEBUG_CALLBACK = GLDebugMessageCallback.create((source, type, id, severity, length, message, userParam) -> {
+    private final GLDebugMessageCallback debugCallback = GLDebugMessageCallback.create((source, type, id, severity, length, message, userParam) -> {
         var level = switch (severity) {
             case GL_DEBUG_SEVERITY_HIGH -> LogLevel.ERROR;
             case GL_DEBUG_SEVERITY_MEDIUM -> LogLevel.WARN;
@@ -27,11 +27,19 @@ public sealed class GlContext extends GlfwWindow permits GlExecutor.Context, GlR
             default -> LogLevel.INFO;
         };
 
-        LOGGER.log(level, MemoryUtil.memUTF8(message, length));
+        if(Config.GL_LOG_LEVEL.get().ordinal() > level.ordinal()) {
+            return;
+        }
+
+        Throwable exception;
+        if(level == LogLevel.ERROR) {
+            exception = new Throwable();
+            Treachery.stripStackFrames(exception, 2);
+        } else {
+            exception = null;
+        }
+        LOGGER.log(level, MemoryUtil.memUTF8(message, length), exception);
     });
-    static {
-        Runtime.getRuntime().addShutdownHook(new Thread(DEBUG_CALLBACK::close, "GlContext Debug Cleanup"));
-    }
 
     @NotNull
     private final GLCapabilities capabilities;
@@ -55,7 +63,8 @@ public sealed class GlContext extends GlfwWindow permits GlExecutor.Context, GlR
 
             if(Config.DEBUG.get()) {
                 glEnable(GL_DEBUG_OUTPUT);
-                glDebugMessageCallback(DEBUG_CALLBACK, NULL);
+                glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+                glDebugMessageCallback(debugCallback, NULL);
             }
         } finally {
             glfwMakeContextCurrent(oldContext);
@@ -115,5 +124,6 @@ public sealed class GlContext extends GlfwWindow permits GlExecutor.Context, GlR
     public void close() {
         super.close();
         GlState.remove(handle());
+        debugCallback.free();
     }
 }

@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer.gl.shader;
 
+import net.gudenau.cavegame.renderer.gl.GlState;
 import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.renderer.shader.VertexAttribute;
 import net.gudenau.cavegame.renderer.shader.VertexFormat;
@@ -7,14 +8,19 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+import static org.lwjgl.opengl.GL33C.*;
+import static org.lwjgl.system.MemoryUtil.NULL;
+
+//FIXME Fix this junk
 public final class GlVertexFormat implements VertexFormat {
     private final List<VertexAttribute> attributes;
     private final int stride;
     private final VertexAttribute color;
     private final VertexAttribute position;
     private final VertexAttribute textureCoord;
+    private final int vao;
 
-    public GlVertexFormat(Map<String, GlProgram.Attribute> inputs, Map<String, ShaderMeta.Attribute> metadata) {
+    public GlVertexFormat(GlState state, Map<String, GlProgram.Attribute> inputs, Map<String, ShaderMeta.Attribute> metadata) {
         Set<String> missing = new HashSet<>();
 
         List<VertexAttribute> attributes = new ArrayList<>();
@@ -24,7 +30,10 @@ public final class GlVertexFormat implements VertexFormat {
         VertexAttribute position = null;
         VertexAttribute textureCoord = null;
 
-        for(var input : inputs.values()) {
+        var inputAttributes = inputs.values().stream()
+            .sorted(Comparator.comparingInt(GlProgram.Attribute::location))
+            .toList();
+        for(var input : inputAttributes) {
             var name = input.name();
             var meta = metadata.get(name);
             if(meta == null) {
@@ -60,6 +69,8 @@ public final class GlVertexFormat implements VertexFormat {
         this.stride = attributes.stream()
             .mapToInt(VertexAttribute::stride)
             .sum();
+
+        vao = glGenVertexArrays();
     }
 
     @Override
@@ -85,5 +96,24 @@ public final class GlVertexFormat implements VertexFormat {
     @Override
     public int stride() {
         return stride;
+    }
+
+    public void bind(@NotNull GlState state) {
+        state.bindVao(vao);
+
+        this.attributes.forEach((attribute) -> {
+            glEnableVertexAttribArray(attribute.location());
+            glVertexAttribPointer(attribute.location(), attribute.count(), switch(attribute.type()) {
+                case STRUCT -> throw new IllegalArgumentException("Struct isn't supported as an attribute");
+                case FLOAT -> GL_FLOAT;
+                case SAMPLER -> throw new IllegalArgumentException("Sampler isn't supported as an attribute");
+            }, false, attribute.stride(), attribute.offset());
+        });
+    }
+
+    public void release(@NotNull GlState state) {
+        if(state.boundVao() == vao) {
+            state.bindVao(0);
+        }
     }
 }
