@@ -1,10 +1,12 @@
 package net.gudenau.cavegame.renderer.vk;
 
 import net.gudenau.cavegame.renderer.BufferBuilder;
-import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.shader.Shader;
+import net.gudenau.cavegame.renderer.shader.Uniform;
 import net.gudenau.cavegame.renderer.shader.VertexFormat;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Collection;
 
 public class VkShader implements Shader {
     private final VkRenderer renderer;
@@ -34,8 +36,13 @@ public class VkShader implements Shader {
     }
 
     @Override
-    public VertexFormat format() {
+    public @NotNull VertexFormat format() {
         return vertexFormat;
+    }
+
+    @Override
+    public @NotNull Collection<? extends Uniform> uniforms() {
+        throw new UnsupportedOperationException();
     }
 
     public VulkanGraphicsPipeline pipeline() {

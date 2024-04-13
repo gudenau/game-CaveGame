@@ -1,28 +1,22 @@
 package net.gudenau.cavegame;
 
 import net.gudenau.cavegame.config.Config;
-import net.gudenau.cavegame.input.Wooting;
-import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
-import net.gudenau.cavegame.renderer.BufferBuilder;
-import net.gudenau.cavegame.renderer.BufferType;
-import net.gudenau.cavegame.renderer.GlfwUtils;
-import net.gudenau.cavegame.renderer.RendererInfo;
+import net.gudenau.cavegame.renderer.*;
 import net.gudenau.cavegame.renderer.model.ObjLoader;
-import net.gudenau.cavegame.renderer.texture.PngReader;
+import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.renderer.texture.Texture;
-import net.gudenau.cavegame.renderer.texture.TextureFormat;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.util.Closer;
 import net.gudenau.cavegame.util.MiscUtils;
-import net.gudenau.cavegame.util.Treachery;
+import org.jetbrains.annotations.NotNull;
+import org.joml.Vector3f;
 import org.lwjgl.system.Configuration;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public final class CaveGame {
     public static final String NAMESPACE = Identifier.CAVEGAME_NAMESPACE;
@@ -98,13 +92,18 @@ public final class CaveGame {
             var indexBuffer = triangleBuffers.get(BufferType.INDEX);
             closer.add(vertexBuffer, indexBuffer);
 
+            var ubo = basicShader.uniformMvp()
+                .orElseThrow(() -> new RuntimeException("Failed to find MVP uniform"));
+
             window.visible(true);
 
             do {
+                updateUbo(renderer, ubo);
+
                 renderer.begin();
                 renderer.drawBuffer(vertexCount, vertexBuffer, indexBuffer);
                 renderer.draw();
-
+ 
                 window.flip();
                 GlfwUtils.poll();
             } while(!window.closeRequested());
@@ -261,5 +260,33 @@ public final class CaveGame {
             } catch (InterruptedException ignored) {}
         }
          */
+    }
+
+    private static long startTime = System.nanoTime();
+    private static void updateUbo(@NotNull Renderer renderer, Shader.MVP uniform) {
+        var currentTime = System.nanoTime();
+        var delta = (float)((currentTime - startTime) * 1.0E-10);
+
+        var ubo = new UniformBufferObject();
+        ubo.model().rotate(
+            delta * 1.5707963267948966F, // 90 degrees
+            new Vector3f(0, 0, 1)
+        );
+        ubo.view().lookAt(
+            new Vector3f(2, 2, 2),
+            new Vector3f(0, 0, 0),
+            new Vector3f(0, 0, 1)
+        );
+        var projection = ubo.proj();
+        var framebufferSize = renderer.framebufferSize();
+        projection.perspective(
+            0.7853982F, // 45 degrees
+            (float) framebufferSize.width() / framebufferSize.height(),
+            0.1F,
+            10,
+            true
+        );
+
+        uniform.upload(ubo::write);
     }
 }

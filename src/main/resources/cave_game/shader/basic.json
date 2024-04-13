@@ -11,9 +11,17 @@
     }
   },
   "uniforms": {
-    "ubo": {
+    "uboModel": {
       "shader": "vertex",
-      "usage": "ubo"
+      "usage": "model"
+    },
+    "uboView": {
+      "shader": "vertex",
+      "usage": "view"
+    },
+    "uboProj": {
+      "shader": "vertex",
+      "usage": "projection"
     }
   },
   "textures": {

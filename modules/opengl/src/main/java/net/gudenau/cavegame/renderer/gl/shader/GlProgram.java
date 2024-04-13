@@ -7,9 +7,7 @@ import net.gudenau.cavegame.renderer.BufferBuilder;
 import net.gudenau.cavegame.renderer.gl.GlRenderer;
 import net.gudenau.cavegame.renderer.gl.GlState;
 import net.gudenau.cavegame.renderer.gl.GlTexture;
-import net.gudenau.cavegame.renderer.shader.Shader;
-import net.gudenau.cavegame.renderer.shader.ShaderMeta;
-import net.gudenau.cavegame.renderer.shader.VertexFormat;
+import net.gudenau.cavegame.renderer.shader.*;
 import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.util.collection.FastCollectors;
@@ -32,7 +30,7 @@ public final class GlProgram implements Shader {
     private final GlRenderer renderer;
     private final int handle;
     private final Map<String, Attribute> attributes;
-    private final Map<String, Uniform> uniforms;
+    private final Map<String, GlUniform> uniforms;
     private final GlVertexFormat format;
     private final Int2ObjectMap<GlTexture> textureBindings;
 
@@ -51,11 +49,11 @@ public final class GlProgram implements Shader {
         }
 
         this.attributes = getAttributes();
-        uniforms = getUniforms();
+        uniforms = getUniforms(metadata);
         format = renderer.executor().get((state) -> new GlVertexFormat(state, this.attributes, metadata.attributes()));
 
         var samplers = uniforms.entrySet().stream()
-            .filter((entry) -> entry.getValue().type() == GL_SAMPLER_2D)
+            .filter((entry) -> entry.getValue().type() == AttributeType.SAMPLER)
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
         var samplerKeys = samplers.keySet();
         if(!samplerKeys.equals(metadata.textures().keySet())) {
@@ -106,6 +104,7 @@ public final class GlProgram implements Shader {
     }
 
     @Override
+    @NotNull
     public GlVertexFormat format() {
         return format;
     }
@@ -118,8 +117,14 @@ public final class GlProgram implements Shader {
         return attributes;
     }
 
-    public Map<String, Uniform> uniforms() {
+    public Map<String, GlUniform> uniformMap() {
         return uniforms;
+    }
+
+    @NotNull
+    @Override
+    public Collection<? extends Uniform> uniforms() {
+        return uniforms.values();
     }
 
     private Map<String, Attribute> getAttributes() {
@@ -144,7 +149,10 @@ public final class GlProgram implements Shader {
         }
     }
 
-    private Map<String, Uniform> getUniforms() {
+    private Map<String, GlUniform> getUniforms(ShaderMeta metadata) {
+        var uniforms = metadata.uniforms();
+        var textures = metadata.textures();
+
         try(var stack = MemoryStack.stackPush()) {
             var limit = glGetProgrami(handle, GL_ACTIVE_UNIFORMS);
 
@@ -174,7 +182,7 @@ public final class GlProgram implements Shader {
             try {
                 var bindingsByType = new Int2IntOpenHashMap();
                 for(int i = 0; i < limit; i++) {
-                    int binding = bindingsByType.compute(types.get(i), (key, value) -> value == null ? 0 : value + 1);
+                    int binding = bindingsByType.compute(types.get(i), (_, value) -> value == null ? 0 : value + 1);
                     glUniform1i(i, binding);
                     bindings.add(binding);
                 }
@@ -182,14 +190,50 @@ public final class GlProgram implements Shader {
                 state.bindProgram(0);
             }
 
-            return IntStream.range(0, limit).mapToObj((index) -> new Uniform(
-                    names.get(index),
-                    locations.getInt(index),
-                    types.get(index),
-                    bindings.getInt(index)
-                ))
+            /*
+            @NotNull String name,
+            @NotNull AttributeType type,
+            int count,
+            int stride,
+            int location,
+            @Nullable UniformUsage usage,
+            int binding
+             */
+            //FIXME Make this somehow work with structs instead of arrays.
+            return IntStream.range(0, limit).mapToObj((index) -> {
+                    var uniformName = names.get(index);
+                    var glType = types.get(index);
+                    var type = switch(glType) {
+                        case GL_SAMPLER_2D -> AttributeType.SAMPLER;
+                        case GL_FLOAT_MAT2, GL_FLOAT_MAT3, GL_FLOAT_MAT4 -> AttributeType.FLOAT;
+                        default -> throw new IllegalStateException("Unexpected value: " + glType);
+                    };
+                    var size = switch(glType) {
+                        case GL_SAMPLER_2D -> -1;
+                        case GL_FLOAT_MAT2 -> 2 * 2;
+                        case GL_FLOAT_MAT3 -> 3 * 3;
+                        case GL_FLOAT_MAT4 -> 4 * 4;
+                        default -> throw new IllegalStateException("Unexpected value: " + glType);
+                    };
+
+                    UniformUsage usage = null;
+                    var uniformMeta = uniforms.get(uniformName);
+                    if(uniformMeta != null) {
+                        usage = uniformMeta.usage();
+                    }
+
+                    return new GlUniform(
+                        uniformName,
+                        type,
+                        size,
+                        type.size() * size,
+                        locations.getInt(index),
+                        usage,
+                        bindings.getInt(index)
+                    );
+                })
                 .collect(Collectors.toUnmodifiableMap(
-                    Uniform::name,
+                    GlUniform::name,
                     Function.identity()
                 ));
         }
@@ -200,12 +244,5 @@ public final class GlProgram implements Shader {
         int location,
         int type,
         int size
-    ) {}
-
-    public record Uniform(
-        String name,
-        int location,
-        int type,
-        int binding
     ) {}
 }

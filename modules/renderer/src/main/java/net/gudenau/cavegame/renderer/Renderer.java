@@ -27,4 +27,6 @@ public interface Renderer extends AutoCloseable {
     void waitForIdle();
 
     @NotNull TextureManager textureManager();
+
+    @NotNull Window.Size framebufferSize();
 }
