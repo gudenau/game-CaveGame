@@ -4,9 +4,6 @@ import net.gudenau.cavegame.renderer.shader.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.nio.ByteBuffer;
-import java.util.function.Consumer;
-
 public record VkUniform(
     @NotNull String name,
     @NotNull AttributeType type,
@@ -14,7 +11,7 @@ public record VkUniform(
     int stride,
     int location,
     @Nullable UniformUsage usage,
-    @NotNull ShaderType shaderType
+    @NotNull ShaderType shader
 ) implements Uniform {
     public VkUniform(VulkanShaderModule.Resource input, ShaderMeta.Uniform meta) {
         this(
@@ -26,10 +23,5 @@ public record VkUniform(
             meta.usage(),
             meta.shader()
         );
-    }
-
-    @Override
-    public void upload(@NotNull Consumer<ByteBuffer> consumer) {
-        throw new UnsupportedOperationException();
     }
 }

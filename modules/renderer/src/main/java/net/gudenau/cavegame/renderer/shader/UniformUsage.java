@@ -4,9 +4,7 @@ import net.gudenau.cavegame.codec.Codec;
 import net.gudenau.cavegame.codec.CodecBuilder;
 
 public enum UniformUsage {
-    MODEL,
-    VIEW,
-    PROJECTION,
+    UBO,
     ;
 
     public static final Codec<UniformUsage> CODEC = CodecBuilder.ofEnum(UniformUsage.class);

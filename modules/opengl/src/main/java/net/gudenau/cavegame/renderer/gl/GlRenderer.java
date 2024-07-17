@@ -26,14 +26,11 @@ public final class GlRenderer implements Renderer {
     private final GlContext primordialContext;
     @NotNull
     private final GlExecutor executor;
-    @NotNull
-    private final GlWindow window;
 
     public GlRenderer(Window window) {
         if(!(window instanceof GlContext context)) {
             throw new IllegalArgumentException("Window " + window + " was not a GlContext");
         }
-        this.window = (GlWindow) window;
         primordialContext = new PrimordialContext(context);
         executor = new GlExecutor(primordialContext);
         textureManager = new GlTextureManager(executor);
@@ -133,12 +130,6 @@ public final class GlRenderer implements Renderer {
     @Override
     public @NotNull TextureManager textureManager() {
         return textureManager;
-    }
-
-    @Override
-    @NotNull
-    public Window.Size framebufferSize() {
-        return window.framebufferSize();
     }
 
     @Override

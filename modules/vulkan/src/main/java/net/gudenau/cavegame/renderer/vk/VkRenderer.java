@@ -278,12 +278,6 @@ public final class VkRenderer implements Renderer {
     }
 
     @Override
-    public @NotNull Window.Size framebufferSize() {
-        var extent = swapchain.extent();
-        return new Window.Size(extent.width(), extent.height());
-    }
-
-    @Override
     public void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer) {
         var commandBuffer = currentFrameState.commandBuffer;
         commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapchainFramebuffers.get(currentImageIndex));

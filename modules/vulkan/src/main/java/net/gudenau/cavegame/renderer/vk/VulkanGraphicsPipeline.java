@@ -132,7 +132,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
                 binding.binding(uniform.location());
                 binding.descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
                 binding.descriptorCount(1);
-                binding.stageFlags(switch(uniform.shaderType()) {
+                binding.stageFlags(switch(uniform.shader()) {
                     case FRAGMENT -> VK_SHADER_STAGE_FRAGMENT_BIT;
                     case VERTEX -> VK_SHADER_STAGE_VERTEX_BIT;
                 });

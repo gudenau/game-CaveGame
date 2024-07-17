@@ -31,11 +31,11 @@ public final class GlShader implements AutoCloseable {
         }
         try(var stack = MemoryStack.stackPush()) {
             handle = glCreateShader(type.id);
-            glShaderSource(handle, stack.pointers(code), stack.ints(code.remaining()));
+            glShaderSource(handle, stack.pointers(code), (IntBuffer) null);
             glCompileShader(handle);
 
             if(glGetShaderi(handle, GL_COMPILE_STATUS) != GL_TRUE) {
-                var error = glGetShaderInfoLog(handle).trim();
+                var error = glGetShaderInfoLog(handle);
                 throw new RuntimeException("Failed to compile " + type.name().toLowerCase(Locale.ROOT) + " shader " + resource + ": " + error);
             }
         } finally {

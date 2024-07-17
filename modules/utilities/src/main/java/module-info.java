@@ -6,7 +6,6 @@ module net.gudenau.cavegame.utilities {
     exports net.gudenau.cavegame.resource;
     exports net.gudenau.cavegame.util;
     exports net.gudenau.cavegame.util.collection;
-    exports net.gudenau.cavegame.util.functional;
 
     requires net.gudenau.cavegame.logger;
 

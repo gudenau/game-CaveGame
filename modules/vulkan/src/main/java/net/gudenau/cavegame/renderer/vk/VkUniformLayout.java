@@ -8,18 +8,14 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 
 public class VkUniformLayout implements UniformLayout {
-    private final List<VkUniform> uniforms;
-    private final VkUniform model;
-    private final VkUniform view;
-    private final VkUniform projection;
+    private final List<Uniform> uniforms;
+    private final VkUniform ubo;
 
     public VkUniformLayout(@NotNull VulkanShaderModule module, @NotNull Map<String, ShaderMeta.Uniform> metadata) {
         Set<String> missing = new HashSet<>();
         List<VkUniform> uniforms = new ArrayList<>();
 
-        VkUniform model = null;
-        VkUniform view = null;
-        VkUniform projection = null;
+        VkUniform ubo = null;
 
         for(var uniform : module.uniforms()) {
             var name = uniform.name();
@@ -33,9 +29,7 @@ public class VkUniformLayout implements UniformLayout {
             var usage = value.usage();
             if(usage != null) {
                 switch(usage) {
-                    case MODEL -> model = value;
-                    case VIEW -> view = value;
-                    case PROJECTION -> projection = value;
+                    case UBO -> ubo = value;
                 }
             }
             uniforms.add(value);
@@ -47,28 +41,16 @@ public class VkUniformLayout implements UniformLayout {
 
         this.uniforms = Collections.unmodifiableList(uniforms);
 
-        this.model = model;
-        this.view = view;
-        this.projection = projection;
+        this.ubo = ubo;
     }
 
     @Override
-    public List<VkUniform> uniforms() {
+    public List<Uniform> uniforms() {
         return uniforms;
     }
 
     @Override
-    public VkUniform model() {
-        return model;
-    }
-
-    @Override
-    public VkUniform view() {
-        return view;
-    }
-
-    @Override
-    public VkUniform projection() {
-        return projection;
+    public Uniform ubo() {
+        return ubo;
     }
 }
