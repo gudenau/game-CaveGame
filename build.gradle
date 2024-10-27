@@ -66,9 +66,11 @@ tasks.register('runGame', JavaExec) {
     jvmArguments = [
         '--add-modules', 'ALL-MODULE-PATH'
     ]
+    /*
     environment += [
         'MANGOHUD': '1'
     ]
+     */
 
     javaLauncher = javaToolchains.launcherFor(java.toolchain)
 }
