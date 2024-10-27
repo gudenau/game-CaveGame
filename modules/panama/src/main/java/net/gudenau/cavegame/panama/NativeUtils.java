@@ -67,6 +67,7 @@ public final class NativeUtils {
         libName = libName.substring(libName.lastIndexOf('.') + 1);
 
         var platformName = switch(platform) {
+            case FREEBSD -> "freebsd";
             case LINUX -> "linux";
             case MACOSX -> "osx";
             case WINDOWS -> "windows";
@@ -77,6 +78,8 @@ public final class NativeUtils {
             case X86 -> "x86";
             case ARM64 -> "aarch64";
             case ARM32 -> "arm";
+            case PPC64LE -> "ppc64le";
+            case RISCV64 -> "riscv64";
         };
 
         library = System.mapLibraryName(library);
