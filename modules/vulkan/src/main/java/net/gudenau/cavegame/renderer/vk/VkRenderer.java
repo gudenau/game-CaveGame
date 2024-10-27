@@ -105,7 +105,7 @@ public final class VkRenderer implements Renderer {
 
     public VkRenderer(@NotNull VkWindow window) {
         try(var stack = MemoryStack.stackPush()) {
-            window.resizeCallback((wind, width, height) -> framebufferResized = true);
+            window.resizeCallback((_, _, _) -> framebufferResized = true);
 
             instance = new VulkanInstance();
             debugMessenger = VulkanUtils.ENABLE_DEBUG ? new VulkanDebugMessenger(instance) : null;
@@ -219,6 +219,8 @@ public final class VkRenderer implements Renderer {
         var imageAvailableSemaphore = currentFrameState.imageAvailableSemaphore();
         var inFlightFence = currentFrameState.inFlightFence();
 
+        inFlightFence.yield();
+
         int imageIndex = swapchain.acquireNextImage(imageAvailableSemaphore);
         //TODO Fix this
         if(imageIndex == -1) {
@@ -227,8 +229,6 @@ public final class VkRenderer implements Renderer {
         currentImageIndex = imageIndex;
 
         updateUniforms();
-
-        inFlightFence.yield();
 
         commandBuffer.reset();
         commandBuffer.begin();
