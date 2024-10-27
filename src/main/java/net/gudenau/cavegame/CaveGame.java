@@ -1,36 +1,33 @@
 package net.gudenau.cavegame;
 
 import net.gudenau.cavegame.config.Config;
-import net.gudenau.cavegame.input.Wooting;
-import net.gudenau.cavegame.logger.LogLevel;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.BufferBuilder;
 import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.GlfwUtils;
 import net.gudenau.cavegame.renderer.RendererInfo;
 import net.gudenau.cavegame.renderer.model.ObjLoader;
-import net.gudenau.cavegame.renderer.texture.PngReader;
 import net.gudenau.cavegame.renderer.texture.Texture;
-import net.gudenau.cavegame.renderer.texture.TextureFormat;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.util.Closer;
 import net.gudenau.cavegame.util.MiscUtils;
-import net.gudenau.cavegame.util.Treachery;
 import org.lwjgl.system.Configuration;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public final class CaveGame {
     public static final String NAMESPACE = Identifier.CAVEGAME_NAMESPACE;
 
     private static final Logger LOGGER = Logger.forName("CaveGame");
 
-    // I'm ignoring the warnings in this method because it's going to be remade at some point.
     public static void main(String[] args) {
+        if(!CaveGame.class.getModule().isNamed()) {
+            throw new IllegalStateException("Can not run as an unnamed module");
+        }
+
         Config.parseArguments(args);
 
         Configuration.SHARED_LIBRARY_EXTRACT_PATH.set(MiscUtils.createTempDir("lwjgl").toString());
