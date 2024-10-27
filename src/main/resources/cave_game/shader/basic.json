@@ -22,13 +22,11 @@
   "shaders": {
     "vertex": {
       "files": {
-        "opengl": "cave_game:basic/opengl",
         "vulkan": "cave_game:basic/vulkan"
       }
     },
     "fragment": {
       "files": {
-        "opengl": "cave_game:basic/opengl",
         "vulkan": "cave_game:basic/vulkan"
       }
     }

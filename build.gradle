@@ -50,6 +50,5 @@ dependencies {
 
     implementation project(':wooting')
     implementation project(':renderer')
-    implementation project(':opengl')
     implementation project(':vulkan')
 }
