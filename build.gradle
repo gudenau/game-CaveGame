@@ -52,3 +52,23 @@ dependencies {
     implementation project(':renderer')
     implementation project(':vulkan')
 }
+
+tasks.register('runGame', JavaExec) {
+    dependsOn jar
+
+    group = 'Execution'
+    description = 'Runs the game'
+    classpath = files(jar.archiveFile, sourceSets.main.runtimeClasspath) - sourceSets.main.output
+    mainModule = 'net.gudenau.cavegame'
+    mainClass = 'net.gudenau.cavegame.CaveGame'
+
+    args = ['-debug', 'true', '-renderer', 'CaveGameVk']
+    jvmArguments = [
+        '--add-modules', 'ALL-MODULE-PATH'
+    ]
+    environment += [
+        'MANGOHUD': '1'
+    ]
+
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}
