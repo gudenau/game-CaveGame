@@ -6,6 +6,12 @@ dependencies {
     implementation 'org.lwjgl:lwjgl'
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
 
+    implementation 'org.lwjgl:lwjgl-freetype'
+    runtimeOnly "org.lwjgl:lwjgl-freetype::$lwjglNatives"
+
     implementation 'org.lwjgl:lwjgl-glfw'
     runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+
+    implementation 'org.lwjgl:lwjgl-harfbuzz'
+    //runtimeOnly "org.lwjgl:lwjgl-harfbuzz::$lwjglNatives"
 }

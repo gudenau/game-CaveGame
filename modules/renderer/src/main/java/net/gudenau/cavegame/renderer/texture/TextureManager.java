@@ -13,4 +13,12 @@ public interface TextureManager {
 
     @NotNull
     Texture loadTexture(@NotNull Identifier identifier, @NotNull TextureFormat format) throws IOException;
+
+    @NotNull
+    default Font loadFont(@NotNull Identifier identifier) throws IOException {
+        return loadFont(identifier, TextureFormat.GRAYSCALE);
+    }
+
+    @NotNull
+    Font loadFont(@NotNull Identifier identifier, @NotNull TextureFormat format) throws IOException;
 }

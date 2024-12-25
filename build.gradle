@@ -27,6 +27,7 @@ allprojects {
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of("${project.javaVersion}")
+            vendor = JvmVendorSpec.ORACLE
         }
 
         modularity.inferModulePath = true

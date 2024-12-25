@@ -16,20 +16,8 @@ public final class PngReader {
         throw new AssertionError();
     }
 
-    public record Result(
-        int width,
-        int height,
-        @NotNull TextureFormat format,
-        @NotNull ByteBuffer pixels
-    ) implements AutoCloseable {
-        @Override
-        public void close() {
-            MemoryUtil.memFree(pixels);
-        }
-    }
-
     @NotNull
-    public static Result read(@NotNull ByteBuffer fileBuffer, @NotNull TextureFormat format) throws IOException {
+    public static NativeTexture read(@NotNull ByteBuffer fileBuffer, @NotNull TextureFormat format) throws IOException {
         //FIXME Find a replacement to AWT, STB is unsafe.
 
         // Read the image from the buffer via AWT
@@ -104,6 +92,6 @@ public final class PngReader {
             default -> throw new RuntimeException("Don't know how to handle " + dataBuffer.getClass().getSimpleName());
         }
 
-        return new Result(width, height, format, result);
+        return NativeTexture.of(width, height, format, result, () -> MemoryUtil.memFree(result));
     }
 }

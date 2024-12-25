@@ -6,7 +6,9 @@ import net.gudenau.cavegame.renderer.BufferBuilder;
 import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.GlfwUtils;
 import net.gudenau.cavegame.renderer.RendererInfo;
+import net.gudenau.cavegame.renderer.font.HarfBuzzFont;
 import net.gudenau.cavegame.renderer.model.ObjLoader;
+import net.gudenau.cavegame.renderer.texture.Font;
 import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
@@ -14,8 +16,13 @@ import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.util.Closer;
 import net.gudenau.cavegame.util.MiscUtils;
 import org.lwjgl.system.Configuration;
+import org.lwjgl.system.MemoryUtil;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 public final class CaveGame {
@@ -36,6 +43,10 @@ public final class CaveGame {
             Configuration.DEBUG_MEMORY_ALLOCATOR.set(true);
             Configuration.DEBUG_STACK.set(true);
         }
+
+        // Required for HarfBuzz to support FreeType with LWJGL
+        HarfBuzzFont.staticInit();
+
         Logger.level(Config.LOG_LEVEL.get());
 
         GlfwUtils.handoverMain(CaveGame::newMain);
@@ -74,6 +85,13 @@ public final class CaveGame {
             Texture texture;
             try {
                 texture = textureManager.loadTexture(new Identifier(NAMESPACE, "viking_room"));
+            } catch(IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            Font font;
+            try {
+                font = textureManager.loadFont(new Identifier(NAMESPACE, "fira_sans_regular"));
             } catch(IOException e) {
                 throw new RuntimeException(e);
             }

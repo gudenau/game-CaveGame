@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer.vk.texture;
 
+import net.gudenau.cavegame.renderer.texture.NativeTexture;
 import net.gudenau.cavegame.renderer.texture.PngReader;
 import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.renderer.vk.*;
@@ -7,10 +8,16 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
+import java.util.Set;
+
 import static org.lwjgl.vulkan.VK10.*;
 
 //TODO Move Vulkan image stuff into it's own class
-public final class VulkanTexture implements Texture {
+public sealed class VulkanTexture implements Texture permits VulkanAtlasedTexture {
+    public enum Flag {
+        DISABLE_MIPMAP,
+    }
+
     private final VulkanLogicalDevice device;
 
     private final VulkanSampler sampler;
@@ -27,7 +34,18 @@ public final class VulkanTexture implements Texture {
         @NotNull VkRenderer renderer,
         @NotNull VulkanTextureManager textureManager,
         @NotNull VkGraphicsBuffer stagingBuffer,
-        @NotNull PngReader.Result imageResult
+        @NotNull NativeTexture imageResult,
+        @NotNull Flag @NotNull ... flags
+    ) {
+        this(renderer, textureManager, stagingBuffer, imageResult, Set.of(flags));
+    }
+
+    public VulkanTexture(
+        @NotNull VkRenderer renderer,
+        @NotNull VulkanTextureManager textureManager,
+        @NotNull VkGraphicsBuffer stagingBuffer,
+        @NotNull NativeTexture imageResult,
+        @NotNull Set<@NotNull Flag> flags
     ) {
         width = imageResult.width();
         height = imageResult.height();
@@ -38,11 +56,16 @@ public final class VulkanTexture implements Texture {
         };
 
         int mipLevels = Math.max(1, 31 - Integer.numberOfLeadingZeros(Math.max(width, height)));
-        try(var stack = MemoryStack.stackPush()) {
-            var properties = VkFormatProperties.calloc(stack);
-            vkGetPhysicalDeviceFormatProperties(renderer.physicalDevice().device(), format, properties);
-            if((properties.optimalTilingFeatures() & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) == 0) {
-                mipLevels = 1;
+        if(flags.contains(Flag.DISABLE_MIPMAP)) {
+            mipLevels = 1;
+        }
+        if(mipLevels > 1) {
+            try(var stack = MemoryStack.stackPush()) {
+                var properties = VkFormatProperties.calloc(stack);
+                vkGetPhysicalDeviceFormatProperties(renderer.physicalDevice().device(), format, properties);
+                if((properties.optimalTilingFeatures() & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) == 0) {
+                    mipLevels = 1;
+                }
             }
         }
 
