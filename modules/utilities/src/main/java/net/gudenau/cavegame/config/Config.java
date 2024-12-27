@@ -54,6 +54,11 @@ public final class Config<T> {
      */
     public static final Config<LogLevel> GL_LOG_LEVEL = enumeration("gl_log_level", LogLevel.INFO, TRUE);
 
+    /**
+     * Set to true to enable the debug Vulkan memory allocator.
+     */
+    public static final Config<Boolean> DEBUG_VULKAN_ALLOCATOR = bool("debug_vk_alloc", false, TRUE);
+
     static {
         // Check system props for any matching values
         CONFIGURATION.stream()
