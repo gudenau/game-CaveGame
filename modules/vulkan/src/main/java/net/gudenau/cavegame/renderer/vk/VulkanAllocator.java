@@ -14,7 +14,7 @@ import java.nio.ByteBuffer;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class VulkanAllocator {
-    private static final boolean ENABLED = Config.DEBUG_VK_ALLOCATOR.get();
+    private static final boolean ENABLED = Config.DEBUG_VULKAN_ALLOCATOR.get();
 
     private static final VkAllocationCallbacks CALLBACKS = VkAllocationCallbacks.calloc()
         .pfnAllocation(VulkanAllocator::allocate)
