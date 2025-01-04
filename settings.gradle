@@ -1,5 +1,9 @@
 import java.nio.file.Files
 
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
 var modulesPath = rootProject.projectDir.toPath().resolve('modules')
 
 try(var stream = Files.list(modulesPath)) {
