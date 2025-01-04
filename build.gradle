@@ -67,6 +67,11 @@ tasks.register('runGame', JavaExec) {
     jvmArguments = [
         '--add-modules', 'ALL-MODULE-PATH'
     ]
+
+    if(System.getProperty('os.name').contains('Mac')) {
+        jvmArguments.add('-XstartOnFirstThread')
+    }
+
     /*
     environment += [
         'MANGOHUD': '1'
