@@ -13,14 +13,12 @@ public record Layout(
     public record Entry(
         int x,
         int y,
+        int width,
+        int height,
         @NotNull Component component
     ) {
-        public int width() {
-            return component.width();
-        }
-
-        public int height() {
-            return component.height();
+        public Entry(int x, int y, @NotNull Component component) {
+            this(x, y, component.width(), component.height(), component);
         }
     }
 }

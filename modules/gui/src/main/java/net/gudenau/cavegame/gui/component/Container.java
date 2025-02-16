@@ -29,8 +29,11 @@ public final class Container implements Component {
     public void draw(@NotNull DrawContext context) {
         var layout = layout();
         context.drawRectangle(0, 0, layout.width(), layout.height(), 0xFF00FF00);
+        int color = 0;
         for(var entry : layout.components()) {
             try(var _ = context.scissor(entry.x(), entry.y(), entry.width(), entry.height())) {
+                context.drawRectangle(0, 0, context.width(), context.height(), 0xFF000000 | (0xFF << (color * 8)));
+                color = (color + 1) % 3;
                 entry.component().draw(context);
             }
         }

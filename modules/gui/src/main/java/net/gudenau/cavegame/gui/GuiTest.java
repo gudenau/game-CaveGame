@@ -4,6 +4,7 @@ import net.gudenau.cavegame.gui.component.ButtonComponent;
 import net.gudenau.cavegame.gui.component.Container;
 import net.gudenau.cavegame.gui.component.TextComponent;
 import net.gudenau.cavegame.gui.drawing.DrawContext;
+import net.gudenau.cavegame.gui.layout.GridLayoutEngine;
 import net.gudenau.cavegame.gui.layout.LinearLayoutEngine;
 import net.gudenau.cavegame.gui.value.Value;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
@@ -39,7 +40,7 @@ public final class GuiTest {
             var graphics = new AwtGraphics(640, 480);
             graphics.drawRectangle(0, 0, Integer.MAX_VALUE, Integer.MAX_VALUE, 0xFFFF00FF);
 
-            var container = new Container(LinearLayoutEngine.get(Direction.Axis.Y));
+            var container = new Container(new GridLayoutEngine(1, GridLayoutEngine.UNLIMITED));
             container.add(new TextComponent("Hello world!", graphics.canvas.graphics));
             container.add(new TextComponent("Narrow", graphics.canvas.graphics));
 
