@@ -1,13 +1,18 @@
 package net.gudenau.cavegame.gui.component;
 
-import net.gudenau.cavegame.gui.Graphics;
+import net.gudenau.cavegame.gui.drawing.DrawContext;
 import net.gudenau.cavegame.gui.MouseButton;
+import net.gudenau.cavegame.gui.drawing.ThreeByThree;
+import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
 public final class ButtonComponent<T extends Component> implements Component {
+    private static final ThreeByThree GRAPHICS = new ThreeByThree(new Identifier("gui", "button"), 9, 4);
+    private static final int PADDING = GRAPHICS.border();
+
     @NotNull
     private final T child;
     @Nullable
@@ -38,17 +43,22 @@ public final class ButtonComponent<T extends Component> implements Component {
 
     @Override
     public int width() {
-        return child.width();
+        return child.width() + PADDING * 2;
     }
 
     @Override
     public int height() {
-        return child.height();
+        return child.height() + PADDING * 2;
     }
 
     @Override
-    public void render(@NotNull Graphics graphics) {
-        child.render(graphics);
+    public void draw(@NotNull DrawContext context) {
+        //context.drawRectangle(0, 0, width(), height(), 0xFFFF00FF);
+        GRAPHICS.draw(context);
+
+        try(var _ = context.scissor(PADDING, PADDING, width() - PADDING * 2, height() - PADDING * 2)) {
+            child.draw(context);
+        }
     }
 
     @Override

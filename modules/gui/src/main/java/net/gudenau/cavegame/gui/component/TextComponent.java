@@ -1,6 +1,6 @@
 package net.gudenau.cavegame.gui.component;
 
-import net.gudenau.cavegame.gui.Graphics;
+import net.gudenau.cavegame.gui.drawing.DrawContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -76,9 +76,8 @@ public final class TextComponent implements Component {
     }
 
     @Override
-    public void render(@NotNull Graphics graphics) {
-        graphics.drawRectangle(0, 0, width(), height(), 0xFFFFFFFF);
-        graphics.drawText(0, metrics().ascent(), text, 0xFF000000);
+    public void draw(@NotNull DrawContext context) {
+        context.drawText(0, metrics().ascent(), text, 0xFF000000);
     }
 
     @Override

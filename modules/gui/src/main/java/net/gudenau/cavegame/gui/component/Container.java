@@ -1,6 +1,6 @@
 package net.gudenau.cavegame.gui.component;
 
-import net.gudenau.cavegame.gui.Graphics;
+import net.gudenau.cavegame.gui.drawing.DrawContext;
 import net.gudenau.cavegame.gui.MouseButton;
 import net.gudenau.cavegame.gui.layout.Layout;
 import net.gudenau.cavegame.gui.layout.LayoutEngine;
@@ -26,28 +26,44 @@ public final class Container implements Component {
     }
 
     @Override
-    public void render(@NotNull Graphics graphics) {
+    public void draw(@NotNull DrawContext context) {
         var layout = layout();
-        graphics.drawRectangle(0, 0, layout.width(), layout.height(), 0xFF00FF00);
+        context.drawRectangle(0, 0, layout.width(), layout.height(), 0xFF00FF00);
         for(var entry : layout.components()) {
-            try(var _ = graphics.scissor(entry.x(), entry.y(), entry.width(), entry.height())) {
-                entry.component().render(graphics);
+            try(var _ = context.scissor(entry.x(), entry.y(), entry.width(), entry.height())) {
+                entry.component().draw(context);
             }
         }
     }
 
+    @NotNull
+    private Optional<Layout.Entry> offsetEntryAt(int x, int y) {
+        return layout().components()
+            .stream()
+            .filter((entry) ->
+                x >= entry.x() &&
+                y >= entry.y() &&
+                x < entry.x() + entry.width() &&
+                y < entry.y() + entry.height()
+            )
+            .findFirst()
+            .map((entry) -> new Layout.Entry(
+                x - entry.x(),
+                y - entry.y(),
+                entry.component()
+            ));
+    }
+
     @Override
     public void onClick(int x, int y, @NotNull MouseButton button) {
-        var layout = layout();
-        layout.components().stream()
-            .filter((entry) -> x >= entry.x() && y >= entry.y() && x < entry.x() + entry.width() && y < entry.y() + entry.height())
-            .findFirst()
-            .ifPresent((entry) -> {
-                var componentX = x - entry.x();
-                var componentY = y - entry.y();
-                var component = entry.component();
-                component.onClick(componentX, componentY, button);
-            });
+        offsetEntryAt(x, y)
+            .ifPresent((entry) -> entry.component().onClick(entry.x(), entry.y(), button));
+    }
+
+    @Override
+    public void onScroll(int x, int y, int amount) {
+        offsetEntryAt(x, y)
+            .ifPresent((entry) -> entry.component().onScroll(entry.x(), entry.y(), amount));
     }
 
     @Override
