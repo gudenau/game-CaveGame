@@ -43,6 +43,7 @@ public final class GuiTest {
             var container = new Container(new GridLayoutEngine(1, GridLayoutEngine.UNLIMITED));
             container.add(new TextComponent("Hello world!", graphics.canvas.graphics));
             container.add(new TextComponent("Narrow", graphics.canvas.graphics));
+            container.add(new TextComponent("Centered", graphics.canvas.graphics, TextComponent.Style.CENTER_HORIZONTAL));
 
             var buttonValue = Value.enumeration(Direction.RIGHT);
             var button = container.add(new ButtonComponent<>(new TextComponent(buttonValue.value().toString(), graphics.canvas.graphics)));

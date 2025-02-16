@@ -5,14 +5,22 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.Graphics2D;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Optional;
 
 //FIXME Remove AWT
 public final class TextComponent implements Component {
     private record Metrics(int ascent, int width, int height) {}
 
+    public enum Style {
+        CENTER_HORIZONTAL,
+    }
+
     @NotNull
     private final Graphics2D graphics;
+    @NotNull
+    private final EnumSet<Style> style;
     @NotNull
     private String text;
     @Nullable
@@ -20,9 +28,11 @@ public final class TextComponent implements Component {
     @Nullable
     private Component parent;
 
-    public TextComponent(@NotNull String text, @NotNull Graphics2D graphics) {
+    public TextComponent(@NotNull String text, @NotNull Graphics2D graphics, @NotNull Style @NotNull ... style) {
         this.text = text;
         this.graphics = graphics;
+        this.style = EnumSet.noneOf(Style.class);
+        Collections.addAll(this.style, style);
     }
 
     public void text(@NotNull String text) {
@@ -77,7 +87,11 @@ public final class TextComponent implements Component {
 
     @Override
     public void draw(@NotNull DrawContext context) {
-        context.drawText(0, metrics().ascent(), text, 0xFF000000);
+        int x = this.style.contains(Style.CENTER_HORIZONTAL) ?
+            (context.width() - width()) / 2 :
+            0;
+
+        context.drawText(x, metrics().ascent(), text, 0xFF000000);
     }
 
     @Override
