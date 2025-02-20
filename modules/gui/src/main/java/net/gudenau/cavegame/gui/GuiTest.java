@@ -3,6 +3,7 @@ package net.gudenau.cavegame.gui;
 import net.gudenau.cavegame.gui.component.ButtonComponent;
 import net.gudenau.cavegame.gui.component.Container;
 import net.gudenau.cavegame.gui.component.TextComponent;
+import net.gudenau.cavegame.gui.component.ValueComponent;
 import net.gudenau.cavegame.gui.drawing.DrawContext;
 import net.gudenau.cavegame.gui.layout.GridLayoutEngine;
 import net.gudenau.cavegame.gui.layout.LinearLayoutEngine;
@@ -40,17 +41,24 @@ public final class GuiTest {
             var graphics = new AwtGraphics(640, 480);
             graphics.drawRectangle(0, 0, Integer.MAX_VALUE, Integer.MAX_VALUE, 0xFFFF00FF);
 
-            var container = new Container(new GridLayoutEngine(1, GridLayoutEngine.UNLIMITED));
+            var container = new Container(new GridLayoutEngine(1, GridLayoutEngine.UNLIMITED)) {
+                @Override
+                public void invalidate() {
+                    super.invalidate();
+
+                    frame.repaint();
+                }
+            };
             container.add(new TextComponent("Hello world!", graphics.canvas.graphics));
             container.add(new TextComponent("Narrow", graphics.canvas.graphics));
             container.add(new TextComponent("Centered", graphics.canvas.graphics, TextComponent.Style.CENTER_HORIZONTAL));
 
             var buttonValue = Value.enumeration(Direction.RIGHT);
-            var button = container.add(new ButtonComponent<>(new TextComponent(buttonValue.value().toString(), graphics.canvas.graphics)));
+            var button = container.add(new ButtonComponent<>(new ValueComponent<>(buttonValue, graphics.canvas.graphics)));
             button.action(buttonValue::next);
             buttonValue.registerEvent((value, _) -> {
-                button.child().text(value.toString());
-                frame.repaint();
+                //button.child().text(value.toString());
+                //frame.repaint();
             });
 
             frame.setSize(640, 480);

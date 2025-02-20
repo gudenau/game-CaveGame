@@ -10,8 +10,8 @@ import java.util.EnumSet;
 import java.util.Optional;
 
 //FIXME Remove AWT
-public final class TextComponent implements Component {
-    private record Metrics(int ascent, int width, int height) {}
+public sealed class TextComponent implements Component permits ValueComponent {
+    protected record Metrics(int ascent, int width, int height) {}
 
     public enum Style {
         CENTER_HORIZONTAL,
@@ -52,13 +52,18 @@ public final class TextComponent implements Component {
     }
 
     @NotNull
-    private Metrics metrics() {
+    protected Metrics metrics() {
         if(metrics != null) {
             return metrics;
         }
 
+        return metrics = metrics(text());
+    }
+
+    @NotNull
+    protected Metrics metrics(@NotNull String text) {
         if(text.isBlank()) {
-            return metrics = new Metrics(0, 0, 0);
+            return new Metrics(0, 0, 0);
         }
 
         var lines = text.lines()
@@ -72,7 +77,7 @@ public final class TextComponent implements Component {
             height += (int) line.getHeight();
         }
 
-        return metrics = new Metrics(graphics.getFontMetrics().getAscent(), width, height);
+        return new Metrics(graphics.getFontMetrics().getAscent(), width, height);
     }
 
     @Override
@@ -85,13 +90,18 @@ public final class TextComponent implements Component {
         return metrics().height();
     }
 
+    @NotNull
+    protected String text() {
+        return text;
+    }
+
     @Override
     public void draw(@NotNull DrawContext context) {
         int x = this.style.contains(Style.CENTER_HORIZONTAL) ?
             (context.width() - width()) / 2 :
             0;
 
-        context.drawText(x, metrics().ascent(), text, 0xFF000000);
+        context.drawText(x, metrics().ascent(), text(), 0xFF000000);
     }
 
     @Override

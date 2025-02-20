@@ -12,7 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.SequencedSet;
 
-public final class Container implements Component {
+public class Container implements Component {
     private final SequencedSet<Component> children = new LinkedHashSet<>();
     private final LayoutEngine layoutEngine;
 
