@@ -56,10 +56,6 @@ public final class GuiTest {
             var buttonValue = Value.enumeration(Direction.RIGHT);
             var button = container.add(new ButtonComponent<>(new ValueComponent<>(buttonValue, graphics.canvas.graphics)));
             button.action(buttonValue::next);
-            buttonValue.registerEvent((value, _) -> {
-                //button.child().text(value.toString());
-                //frame.repaint();
-            });
 
             frame.setSize(640, 480);
             frame.add(new JPanel() {
