@@ -2,6 +2,7 @@ package net.gudenau.cavegame.gui.value;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Optional;
 import java.util.SequencedCollection;
 
 public sealed interface UniverseValue<T> extends Value<T> permits EnumValue {

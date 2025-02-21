@@ -5,6 +5,7 @@ import net.gudenau.cavegame.gui.component.Container;
 import net.gudenau.cavegame.gui.component.TextComponent;
 import net.gudenau.cavegame.gui.component.ValueComponent;
 import net.gudenau.cavegame.gui.drawing.DrawContext;
+import net.gudenau.cavegame.gui.drawing.Font;
 import net.gudenau.cavegame.gui.layout.GridLayoutEngine;
 import net.gudenau.cavegame.gui.layout.LinearLayoutEngine;
 import net.gudenau.cavegame.gui.value.Value;
@@ -49,12 +50,12 @@ public final class GuiTest {
                     frame.repaint();
                 }
             };
-            container.add(new TextComponent("Hello world!", graphics.canvas.graphics));
-            container.add(new TextComponent("Narrow", graphics.canvas.graphics));
-            container.add(new TextComponent("Centered", graphics.canvas.graphics, TextComponent.Style.CENTER_HORIZONTAL));
+            container.add(new TextComponent("Hello world!", graphics));
+            container.add(new TextComponent("Narrow", graphics));
+            container.add(new TextComponent("Centered", graphics, TextComponent.Style.CENTER_HORIZONTAL));
 
             var buttonValue = Value.enumeration(Direction.RIGHT);
-            var button = container.add(new ButtonComponent<>(new ValueComponent<>(buttonValue, graphics.canvas.graphics)));
+            var button = container.add(new ButtonComponent<>(new ValueComponent<>(buttonValue, graphics)));
             button.action(buttonValue::next);
 
             frame.setSize(640, 480);
@@ -91,7 +92,7 @@ public final class GuiTest {
         });
     }
 
-    private static final class AwtGraphics implements DrawContext {
+    private static final class AwtGraphics implements DrawContext, Font {
         private AwtCanvas root;
         private AwtCanvas canvas;
 
@@ -164,6 +165,18 @@ public final class GuiTest {
 
             var graphics = canvas.graphics;
             graphics.drawImage(image, x, y, x + width, y + height, imageXOff, imageYOff, imageXOff + imageWidth, imageYOff + imageHeight, null);
+        }
+
+        @Override
+        @NotNull
+        public Bounds stringBounds(@NotNull String text) {
+            var bounds = canvas.graphics.getFontMetrics().getStringBounds(text, canvas.graphics);
+            return new Bounds((int) bounds.getWidth(), (int) bounds.getHeight());
+        }
+
+        @Override
+        public int ascent() {
+            return canvas.graphics.getFontMetrics().getAscent();
         }
 
         private final class AwtCanvas implements DrawContext.StackEntry {

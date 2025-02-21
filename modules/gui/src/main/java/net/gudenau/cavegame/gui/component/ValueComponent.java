@@ -1,20 +1,20 @@
 package net.gudenau.cavegame.gui.component;
 
+import net.gudenau.cavegame.gui.drawing.Font;
+import net.gudenau.cavegame.gui.drawing.TextMetrics;
 import net.gudenau.cavegame.gui.value.UniverseValue;
 import net.gudenau.cavegame.gui.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.Graphics2D;
-
 public final class ValueComponent<T> extends TextComponent {
     @NotNull
     private final Value<T> value;
     @Nullable
-    private Metrics universeMetrics = null;
+    private TextMetrics universeMetrics = null;
 
-    public ValueComponent(@NotNull Value<T> value, @NotNull Graphics2D graphics, @NotNull Style @NotNull ... style) {
-        super("This text should never be seen", graphics, style);
+    public ValueComponent(@NotNull Value<T> value, @NotNull Font font, @NotNull Style @NotNull ... style) {
+        super("This text should never be seen", font, style);
 
         this.value = value;
         value.registerEvent((_, _) -> invalidate());
@@ -23,7 +23,7 @@ public final class ValueComponent<T> extends TextComponent {
             universeMetrics = universe.universe().stream()
                 .map(String::valueOf)
                 .map(this::metrics)
-                .reduce((a, b) -> new Metrics(
+                .reduce((a, b) -> new TextMetrics(
                     Math.max(a.ascent(), b.ascent()),
                     Math.max(a.width(), b.width()),
                     Math.max(a.height(), b.height())
@@ -45,7 +45,7 @@ public final class ValueComponent<T> extends TextComponent {
 
     @Override
     @NotNull
-    protected Metrics metrics() {
+    protected TextMetrics metrics() {
         return universeMetrics == null ? super.metrics() : universeMetrics;
     }
 }

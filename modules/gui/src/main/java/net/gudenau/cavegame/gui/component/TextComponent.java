@@ -1,36 +1,34 @@
 package net.gudenau.cavegame.gui.component;
 
 import net.gudenau.cavegame.gui.drawing.DrawContext;
+import net.gudenau.cavegame.gui.drawing.Font;
+import net.gudenau.cavegame.gui.drawing.TextMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.Graphics2D;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Optional;
 
-//FIXME Remove AWT
 public sealed class TextComponent implements Component permits ValueComponent {
-    protected record Metrics(int ascent, int width, int height) {}
-
     public enum Style {
         CENTER_HORIZONTAL,
     }
 
     @NotNull
-    private final Graphics2D graphics;
+    private final Font font;
     @NotNull
     private final EnumSet<Style> style;
     @NotNull
     private String text;
     @Nullable
-    private Metrics metrics;
+    private TextMetrics metrics;
     @Nullable
     private Component parent;
 
-    public TextComponent(@NotNull String text, @NotNull Graphics2D graphics, @NotNull Style @NotNull ... style) {
+    public TextComponent(@NotNull String text, @NotNull Font font, @NotNull Style @NotNull ... style) {
         this.text = text;
-        this.graphics = graphics;
+        this.font = font;
         this.style = EnumSet.noneOf(Style.class);
         Collections.addAll(this.style, style);
     }
@@ -52,32 +50,17 @@ public sealed class TextComponent implements Component permits ValueComponent {
     }
 
     @NotNull
-    protected Metrics metrics() {
+    protected TextMetrics metrics() {
         if(metrics != null) {
             return metrics;
         }
 
-        return metrics = metrics(text());
+        return metrics = font.metrics(text());
     }
 
     @NotNull
-    protected Metrics metrics(@NotNull String text) {
-        if(text.isBlank()) {
-            return new Metrics(0, 0, 0);
-        }
-
-        var lines = text.lines()
-            .map((line) -> graphics.getFontMetrics().getStringBounds(line, graphics))
-            .toList();
-
-        int width = 0;
-        int height = 0;
-        for(var line : lines) {
-            width = Math.max(width, (int) line.getWidth());
-            height += (int) line.getHeight();
-        }
-
-        return new Metrics(graphics.getFontMetrics().getAscent(), width, height);
+    protected TextMetrics metrics(@NotNull String text) {
+        return font.metrics(text);
     }
 
     @Override
