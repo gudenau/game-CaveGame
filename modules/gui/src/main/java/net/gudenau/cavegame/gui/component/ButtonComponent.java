@@ -1,7 +1,7 @@
 package net.gudenau.cavegame.gui.component;
 
 import net.gudenau.cavegame.gui.drawing.DrawContext;
-import net.gudenau.cavegame.gui.MouseButton;
+import net.gudenau.cavegame.gui.input.MouseButton;
 import net.gudenau.cavegame.gui.drawing.ThreeByThree;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
@@ -10,8 +10,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 
 public final class ButtonComponent<T extends Component> implements Component {
-    private static final ThreeByThree GRAPHICS = new ThreeByThree(new Identifier("gui", "button"), 9, 4);
-    private static final int PADDING = GRAPHICS.border();
+    private static final int PADDING = 4;
+    private static final ThreeByThree GRAPHICS = new ThreeByThree(new Identifier("gui", "button"), 9, PADDING);
 
     @NotNull
     private final T child;
@@ -53,10 +53,13 @@ public final class ButtonComponent<T extends Component> implements Component {
 
     @Override
     public void draw(@NotNull DrawContext context) {
-        //context.drawRectangle(0, 0, width(), height(), 0xFFFF00FF);
+        var ctxWidth = context.width();
+        var ctxHeight = context.height();
+
+        //context.drawRectangle(0, 0, ctxWidth, ctxHeight, 0xFFFF00FF);
         GRAPHICS.draw(context);
 
-        try(var _ = context.scissor(PADDING, PADDING, width() - PADDING * 2, height() - PADDING * 2)) {
+        try(var _ = context.scissor(PADDING, PADDING, ctxWidth - PADDING * 2, ctxHeight - PADDING * 2)) {
             child.draw(context);
         }
     }

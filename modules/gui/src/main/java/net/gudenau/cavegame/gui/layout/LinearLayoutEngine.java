@@ -25,8 +25,17 @@ public final class LinearLayoutEngine implements LayoutEngine {
     @NotNull
     private final Direction.Axis axis;
 
+    private int minimumWidth;
+    private int minimumHeight;
+
     private LinearLayoutEngine(@NotNull Direction.Axis axis) {
         this.axis = axis;
+    }
+
+    @Override
+    public void minimumSize(int width, int height) {
+        minimumWidth = width;
+        minimumHeight = height;
     }
 
     @NotNull
@@ -59,6 +68,6 @@ public final class LinearLayoutEngine implements LayoutEngine {
             .max()
             .orElse(0);
 
-        return new Layout(width, height, List.copyOf(entries));
+        return new Layout(Math.max(minimumWidth, width), Math.max(minimumHeight, height), List.copyOf(entries));
     }
 }

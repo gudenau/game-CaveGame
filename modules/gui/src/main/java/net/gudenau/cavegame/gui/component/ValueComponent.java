@@ -20,16 +20,14 @@ public final class ValueComponent<T> extends TextComponent {
         value.registerEvent((_, _) -> invalidate());
 
         if(value instanceof UniverseValue<T> universe) {
-            universeMetrics = universe.universe().stream()
-                .map(String::valueOf)
-                .map(this::metrics)
-                .reduce((a, b) -> new TextMetrics(
-                    Math.max(a.ascent(), b.ascent()),
-                    Math.max(a.width(), b.width()),
-                    Math.max(a.height(), b.height())
-                ))
+            universeMetrics = universe.metrics(font)
                 .orElse(null);
         }
+    }
+
+    @NotNull
+    public Value<T> value() {
+        return value;
     }
 
     @Override

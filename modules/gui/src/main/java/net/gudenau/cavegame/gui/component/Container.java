@@ -1,7 +1,8 @@
 package net.gudenau.cavegame.gui.component;
 
 import net.gudenau.cavegame.gui.drawing.DrawContext;
-import net.gudenau.cavegame.gui.MouseButton;
+import net.gudenau.cavegame.gui.input.InputAction;
+import net.gudenau.cavegame.gui.input.MouseButton;
 import net.gudenau.cavegame.gui.layout.Layout;
 import net.gudenau.cavegame.gui.layout.LayoutEngine;
 import org.jetbrains.annotations.Contract;
@@ -21,6 +22,10 @@ public class Container implements Component {
     @Nullable
     private Layout layout;
 
+    @Nullable
+    private Component dragTarget;
+    private boolean isDragging;
+
     public Container(@NotNull LayoutEngine layoutEngine) {
         this.layoutEngine = layoutEngine;
     }
@@ -28,7 +33,7 @@ public class Container implements Component {
     @Override
     public void draw(@NotNull DrawContext context) {
         var layout = layout();
-        context.drawRectangle(0, 0, layout.width(), layout.height(), 0xFF00FF00);
+        context.drawRectangle(0, 0, width(), height(), 0xFF00FF00);
         for(var entry : layout.components()) {
             try(var _ = context.scissor(entry.x(), entry.y(), entry.width(), entry.height())) {
                 entry.component().draw(context);
@@ -37,16 +42,21 @@ public class Container implements Component {
     }
 
     @NotNull
-    private Optional<Layout.Entry> offsetEntryAt(int x, int y) {
+    private Optional<Layout.Entry> entryAt(int x, int y) {
         return layout().components()
             .stream()
             .filter((entry) ->
                 x >= entry.x() &&
-                y >= entry.y() &&
-                x < entry.x() + entry.width() &&
-                y < entry.y() + entry.height()
+                    y >= entry.y() &&
+                    x < entry.x() + entry.width() &&
+                    y < entry.y() + entry.height()
             )
-            .findFirst()
+            .findFirst();
+    }
+
+    @NotNull
+    private Optional<Layout.Entry> offsetEntryAt(int x, int y) {
+        return entryAt(x, y)
             .map((entry) -> new Layout.Entry(
                 x - entry.x(),
                 y - entry.y(),
@@ -58,6 +68,29 @@ public class Container implements Component {
     public void onClick(int x, int y, @NotNull MouseButton button) {
         offsetEntryAt(x, y)
             .ifPresent((entry) -> entry.component().onClick(entry.x(), entry.y(), button));
+    }
+
+    @Override
+    public void onDrag(int x, int y, @NotNull MouseButton button, @NotNull InputAction action) {
+        if(action == InputAction.START) {
+            offsetEntryAt(x, y).ifPresentOrElse((entry) -> {
+                dragTarget = entry.component();
+                dragTarget.onDrag(entry.x(), entry.y(), button, action);
+            }, () -> {
+                dragTarget = null;
+            });
+        } else {
+            if(dragTarget == null) {
+                return;
+            }
+
+            var entry = layout().entryOf(dragTarget);
+            dragTarget.onDrag(x - entry.x(), y - entry.y(), button, action);
+
+            if(action == InputAction.STOP) {
+                dragTarget = null;
+            }
+        }
     }
 
     @Override

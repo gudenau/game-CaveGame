@@ -31,4 +31,20 @@ final class EnumValue<T extends Enum<T>> extends MutableValue<T> implements Univ
     public SequencedCollection<T> universe() {
         return universe;
     }
+
+    @Override
+    @NotNull
+    public T valueAt(int index) {
+        return universe.get(index);
+    }
+
+    @Override
+    public int valueCount() {
+        return universe.size();
+    }
+
+    @Override
+    public int indexOf(@NotNull T value) {
+        return value.ordinal();
+    }
 }

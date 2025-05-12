@@ -1,13 +1,10 @@
 package net.gudenau.cavegame.gui;
 
-import net.gudenau.cavegame.gui.component.ButtonComponent;
-import net.gudenau.cavegame.gui.component.Container;
-import net.gudenau.cavegame.gui.component.TextComponent;
-import net.gudenau.cavegame.gui.component.ValueComponent;
+import net.gudenau.cavegame.gui.component.*;
 import net.gudenau.cavegame.gui.drawing.DrawContext;
 import net.gudenau.cavegame.gui.drawing.Font;
+import net.gudenau.cavegame.gui.input.MouseButton;
 import net.gudenau.cavegame.gui.layout.GridLayoutEngine;
-import net.gudenau.cavegame.gui.layout.LinearLayoutEngine;
 import net.gudenau.cavegame.gui.value.Value;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
@@ -23,6 +20,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.HashMap;
@@ -42,7 +40,9 @@ public final class GuiTest {
             var graphics = new AwtGraphics(640, 480);
             graphics.drawRectangle(0, 0, Integer.MAX_VALUE, Integer.MAX_VALUE, 0xFFFF00FF);
 
-            var container = new Container(new GridLayoutEngine(1, GridLayoutEngine.UNLIMITED)) {
+            var layout = new GridLayoutEngine(1, GridLayoutEngine.UNLIMITED);
+            layout.minimumSize(graphics.width() / 2, graphics.height() / 2);
+            var container = new Container(layout) {
                 @Override
                 public void invalidate() {
                     super.invalidate();
@@ -58,10 +58,13 @@ public final class GuiTest {
             var button = container.add(new ButtonComponent<>(new ValueComponent<>(buttonValue, graphics)));
             button.action(buttonValue::next);
 
+            var sliderValue = Value.enumeration(Direction.RIGHT);
+            container.add(new SliderComponent<>(new ValueComponent<>(sliderValue, graphics, TextComponent.Style.CENTER_HORIZONTAL)));
+
             frame.setSize(640, 480);
             frame.add(new JPanel() {
                 {
-                    addMouseListener(new MouseAdapter() {
+                    var listener = new MouseAdapter() {
                         @Override
                         public void mouseClicked(MouseEvent e) {
                             var location = e.getPoint();
@@ -77,7 +80,16 @@ public final class GuiTest {
                                 container.onClick(location.x, location.y, button);
                             }
                         }
-                    });
+
+                        @Override
+                        public void mouseWheelMoved(MouseWheelEvent e) {
+                            var location = e.getPoint();
+                            container.onScroll(location.x, location.y, -e.getWheelRotation());
+                        }
+                    };
+                    addMouseListener(listener);
+                    addMouseMotionListener(listener);
+                    addMouseWheelListener(listener);
                 }
 
                 @Override
@@ -156,7 +168,15 @@ public final class GuiTest {
 
         @Override
         public void drawImage(@NotNull Identifier identifier, int x, int y, int width, int height, int u, int v, int uWidth, int uHeight, int textureWidth, int textureHeight) {
+            if(false) {
+                return;
+            }
+
             var image = loadImage(identifier);
+
+            if(width == 0 || height == 0 || uWidth == 0 || uHeight == 0) {
+                getClass();
+            }
 
             int imageXOff = (int) ((u / (double) textureWidth) * image.getWidth());
             int imageYOff = (int) ((v / (double) textureHeight) * image.getHeight());

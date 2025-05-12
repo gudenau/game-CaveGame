@@ -2,12 +2,10 @@ package net.gudenau.cavegame.gui.value;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.EnumSet;
 import java.util.List;
 import java.util.SequencedCollection;
-import java.util.Set;
 
-public sealed interface Value<T> permits MutableValue, UniverseValue {
+public sealed interface Value<T> permits MutableValue, RangeValue {
     @FunctionalInterface
     interface Event<T> {
         void onChanged(@NotNull T value, @NotNull T old);
@@ -30,6 +28,11 @@ public sealed interface Value<T> permits MutableValue, UniverseValue {
         }
 
         return new EnumValue<>(initial, universe);
+    }
+
+    @NotNull
+    static RangeValue<Integer> range(int initial, int min, int max) {
+        return new IntegerValue(initial, min, max);
     }
 
     @NotNull T value();

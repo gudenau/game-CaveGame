@@ -2,6 +2,7 @@ package net.gudenau.cavegame.gui.layout;
 
 import net.gudenau.cavegame.gui.component.Component;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.SequencedCollection;
 
@@ -20,5 +21,13 @@ public record Layout(
         public Entry(int x, int y, @NotNull Component component) {
             this(x, y, component.width(), component.height(), component);
         }
+    }
+
+    @NotNull
+    public Entry entryOf(@Nullable Component child) {
+        return components.stream()
+            .filter((entry) -> entry.component == child)
+            .findAny()
+            .orElseThrow(() -> new IllegalStateException("Component " + child + " was not a child of this layout"));
     }
 }

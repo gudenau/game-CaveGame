@@ -1,6 +1,7 @@
 package net.gudenau.cavegame.gui.component;
 
-import net.gudenau.cavegame.gui.MouseButton;
+import net.gudenau.cavegame.gui.input.InputAction;
+import net.gudenau.cavegame.gui.input.MouseButton;
 import net.gudenau.cavegame.gui.drawing.Drawable;
 import org.jetbrains.annotations.NotNull;
 
@@ -14,6 +15,8 @@ public interface Component extends Drawable {
     @NotNull Optional<Component> parent();
 
     default void onClick(int x, int y, @NotNull MouseButton button) {}
+
+    default void onDrag(int x, int y, @NotNull MouseButton button, @NotNull InputAction action) {}
 
     default void onScroll(int x, int y, int amount) {}
 

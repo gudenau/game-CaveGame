@@ -14,6 +14,9 @@ public final class GridLayoutEngine implements LayoutEngine {
     private final int columns;
     private final int rows;
 
+    private int minimumWidth;
+    private int minimumHeight;
+
     public GridLayoutEngine(int columns, int rows) {
         if(columns == UNLIMITED && rows == UNLIMITED) {
             throw new IllegalArgumentException("Columns and rows can't both be unlimited");
@@ -21,6 +24,12 @@ public final class GridLayoutEngine implements LayoutEngine {
 
         this.columns = columns;
         this.rows = rows;
+    }
+
+    @Override
+    public void minimumSize(int width, int height) {
+        minimumWidth = width;
+        minimumHeight = height;
     }
 
     @Override
@@ -44,6 +53,9 @@ public final class GridLayoutEngine implements LayoutEngine {
         }
         var limit = (long) columns * rows;
 
+        int minimumWidth = this.minimumWidth / columns;
+        int minimumHeight = this.minimumHeight / rows;
+
         var state = new Object() {
             int x = 0;
             int y = 0;
@@ -51,8 +63,8 @@ public final class GridLayoutEngine implements LayoutEngine {
             final int[] heights = new int[rows];
 
             void size(int width, int height) {
-                widths[x] = Math.max(widths[x], width);
-                heights[y] = Math.max(heights[y], height);
+                widths[x] = Math.max(widths[x], Math.max(minimumWidth, width));
+                heights[y] = Math.max(heights[y], Math.max(minimumHeight, height));
                 advance();
             }
 
