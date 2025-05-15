@@ -2,6 +2,7 @@ package net.gudenau.cavegame.gui.layout;
 
 import net.gudenau.cavegame.gui.Direction;
 import net.gudenau.cavegame.gui.component.Component;
+import net.gudenau.cavegame.gui.component.Container;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -40,7 +41,9 @@ public final class LinearLayoutEngine implements LayoutEngine {
 
     @NotNull
     @Override
-    public Layout layout(@NotNull Component parent, @NotNull Collection<Component> children) {
+    public Layout layout(@NotNull Container parent) {
+        var children = parent.children();
+
         var entries = new ArrayList<Layout.Entry>(children.size());
         int location = 0;
 

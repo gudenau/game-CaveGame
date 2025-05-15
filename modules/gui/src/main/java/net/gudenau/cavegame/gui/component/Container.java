@@ -9,9 +9,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.LinkedHashSet;
-import java.util.Optional;
-import java.util.SequencedSet;
+import java.util.*;
 
 public class Container implements Component {
     private final SequencedSet<Component> children = new LinkedHashSet<>();
@@ -28,6 +26,11 @@ public class Container implements Component {
 
     public Container(@NotNull LayoutEngine layoutEngine) {
         this.layoutEngine = layoutEngine;
+    }
+
+    @NotNull
+    public Collection<Component> children() {
+        return Collections.unmodifiableCollection(children);
     }
 
     @Override
@@ -109,7 +112,7 @@ public class Container implements Component {
     @NotNull
     private Layout layout() {
         if(layout == null) {
-            layout = layoutEngine.layout(this, children);
+            layout = layoutEngine.layout(this);
         }
         return layout;
     }

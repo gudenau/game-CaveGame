@@ -1,6 +1,7 @@
 package net.gudenau.cavegame.gui.layout;
 
 import net.gudenau.cavegame.gui.component.Component;
+import net.gudenau.cavegame.gui.component.Container;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -34,7 +35,9 @@ public final class GridLayoutEngine implements LayoutEngine {
 
     @Override
     @NotNull
-    public Layout layout(@NotNull Component parent, @NotNull Collection<Component> children) {
+    public Layout layout(@NotNull Container parent) {
+        var children = parent.children();
+
         final int columns, rows;
         solver: {
             if(this.columns != UNLIMITED && this.rows != UNLIMITED) {
