@@ -24,34 +24,14 @@ public sealed interface UniverseValue<T> extends SeekableValue<T> permits EnumVa
 
     @NotNull
     default T next() {
-        var value = value();
-        var universe = universe();
-        var iterator = universe.iterator();
-        while(iterator.hasNext()) {
-            if(iterator.next().equals(value)) {
-                break;
-            }
-        }
-
-        var next = iterator.hasNext() ? iterator.next() : universe.getFirst();
-        value(next);
-        return next;
+        increment();
+        return value();
     }
 
     @NotNull
     default T previous() {
-        var value = value();
-        var universe = universe().reversed();
-        var iterator = universe.iterator();
-        while(iterator.hasNext()) {
-            if(iterator.next().equals(value)) {
-                break;
-            }
-        }
-
-        var next = iterator.hasNext() ? iterator.next() : universe.getFirst();
-        value(next);
-        return next;
+        decrement();
+        return value();
     }
 
     @NotNull
