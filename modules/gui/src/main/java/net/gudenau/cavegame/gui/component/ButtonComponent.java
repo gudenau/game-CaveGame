@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
+/// A simple button component.
 public final class ButtonComponent<T extends Component> implements Component {
     private static final int PADDING = 4;
     private static final ThreeByThree GRAPHICS = new ThreeByThree(new Identifier("gui", "button"), 9, PADDING);
@@ -20,16 +21,25 @@ public final class ButtonComponent<T extends Component> implements Component {
     @Nullable
     private Component parent;
 
+    /// Creates a new button component with the provided child for the button contents.
+    ///
+    /// @param child The child of this button
     public ButtonComponent(@NotNull T child) {
         this.child = child;
         child.parent(this);
     }
 
+    /// Gets the child of this button.
+    ///
+    /// @return The child of this button
     @NotNull
     public T child() {
         return child;
     }
 
+    /// Sets the click action of this button.
+    ///
+    /// @param action The new button action
     public void action(@NotNull Runnable action) {
         this.action = action;
     }

@@ -6,18 +6,21 @@ import net.gudenau.cavegame.gui.component.Container;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.ToIntFunction;
 
+/// A simple layout engine that places all elements in a row.
+//FIXME Make this immutable
 public final class LinearLayoutEngine implements LayoutEngine {
+    @Deprecated(forRemoval = true)
     private static final Map<Direction.Axis, LinearLayoutEngine> INSTANCES = Map.of(
         Direction.Axis.X, new LinearLayoutEngine(Direction.Axis.X),
         Direction.Axis.Y, new LinearLayoutEngine(Direction.Axis.Y)
     );
 
+    @Deprecated(forRemoval = true)
     @NotNull
     public static LinearLayoutEngine get(@NotNull Direction.Axis axis) {
         return INSTANCES.get(axis);

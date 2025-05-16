@@ -3,6 +3,21 @@ package net.gudenau.cavegame.gui.drawing;
 import net.gudenau.cavegame.resource.Identifier;
 import org.jetbrains.annotations.NotNull;
 
+/// A basic 3x3 graphical component. This is used to draw things like buttons, where they have a variable size but a
+/// very small graphic associated with them.
+///
+/// The image layout should look something like this:
+/// +----+----+----+
+/// | UL | UM | UR |
+/// +----+----+----+
+/// | ML | M  | MR |
+/// +----+----+----+
+/// | LL | LM | LR |
+/// +----+----+----+
+///
+/// Where UL is the upper-left corner of the graphic, UM is the upper middle edge of the graphic, UR is the upper right
+/// of the graphic, etc. The sides and middle get stretched to fill in the space the graphic occupies while the corners
+/// remain the same size.
 public final class ThreeByThree implements Drawable {
     @NotNull
     private final Identifier identifier;
@@ -11,6 +26,13 @@ public final class ThreeByThree implements Drawable {
     private final int xBorder;
     private final int yBorder;
 
+    /// Constructs a new 3x3 graphic.
+    ///
+    /// @param identifier The {@link Identifier} for the texture to use when rendering
+    /// @param texWidth The expected width of the texture
+    /// @param texHeight The expected height of the texture
+    /// @param xBorder The width of the corners
+    /// @param yBorder The height of the corners
     public ThreeByThree(@NotNull Identifier identifier, int texWidth, int texHeight, int xBorder, int yBorder) {
         this.identifier = identifier;
         this.width = texWidth;
@@ -19,6 +41,12 @@ public final class ThreeByThree implements Drawable {
         this.yBorder = yBorder;
     }
 
+    /// Constructs a new square 3x3 graphic. Equivalent to calling {@link #ThreeByThree(Identifier, int, int, int, int)}
+    /// with texWidth and texHeight the same value as well as xBorder and yBorder the same value.
+    ///
+    /// @param identifier The {@link Identifier} for the texture to use when rendering.
+    /// @param texSize The expected size of the texture
+    /// @param border The size of the corners
     public ThreeByThree(@NotNull Identifier identifier, int texSize, int border) {
         this(identifier, texSize, texSize, border, border);
     }

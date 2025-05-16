@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+/// An integer based value.
 public final class IntegerValue implements SeekableValue<Integer> {
     private final Set<Event<Integer>> handlers = new HashSet<>();
     private final int max;

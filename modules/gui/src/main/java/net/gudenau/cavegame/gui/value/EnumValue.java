@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+/// An enum based value.
 final class EnumValue<T extends Enum<T>> extends MutableValue<T> implements UniverseValue<T> {
     @NotNull
     private final List<T> universe;

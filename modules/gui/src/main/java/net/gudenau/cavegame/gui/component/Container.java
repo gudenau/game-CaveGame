@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
+/// A container of other components.
 public class Container implements Component {
     private final SequencedSet<Component> children = new LinkedHashSet<>();
     private final LayoutEngine layoutEngine;
@@ -24,10 +25,17 @@ public class Container implements Component {
     private Component dragTarget;
     private boolean isDragging;
 
+    /// Constructs a new container with the provided {@link LayoutEngine}
+    ///
+    /// @param layoutEngine The {@link LayoutEngine} use to lay this container out
     public Container(@NotNull LayoutEngine layoutEngine) {
         this.layoutEngine = layoutEngine;
     }
 
+    /// Get a read-only view of the children of this Container. If the children are modified this collection will
+    /// reflect the changes.
+    ///
+    /// @return A read-only view of the children
     @NotNull
     public Collection<Component> children() {
         return Collections.unmodifiableCollection(children);
@@ -44,6 +52,7 @@ public class Container implements Component {
         }
     }
 
+    /// Gets the {@link Layout.Entry Layout entry} that corresponds to a point in this container, if it exists.
     @NotNull
     private Optional<Layout.Entry> entryAt(int x, int y) {
         return layout().components()
@@ -127,6 +136,12 @@ public class Container implements Component {
         return layout().height();
     }
 
+    /// Adds a child to this container and sets the parent of the added component to this container.
+    ///
+    /// @param component The component to add
+    /// @param <T> The type of the component
+    /// @return The passed component
+    /// @throws IllegalStateException If the provided component already has a parent
     @Contract("_ -> param1")
     @NotNull
     public <T extends Component> T add(@NotNull T component) {

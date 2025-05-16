@@ -4,11 +4,12 @@ import net.gudenau.cavegame.gui.component.Component;
 import net.gudenau.cavegame.gui.component.Container;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.SequencedCollection;
 import java.util.stream.IntStream;
 
+/// A simple grid {@link GridLayoutEngine}.
+//FIXME Make this immutable
 public final class GridLayoutEngine implements LayoutEngine {
     public static final int UNLIMITED = -1;
 

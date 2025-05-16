@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Optional;
 
+/// A basic text based {@link Component}.
 public sealed class TextComponent implements Component permits ValueComponent {
     public enum Style {
         CENTER_HORIZONTAL,
@@ -26,6 +27,11 @@ public sealed class TextComponent implements Component permits ValueComponent {
     @Nullable
     private Component parent;
 
+    /// Constructs a new TextComponent.
+    ///
+    /// @param text The text to be rendered
+    /// @param font The font to use for rendering
+    /// @param style The style to use for rendering
     public TextComponent(@NotNull String text, @NotNull Font font, @NotNull Style @NotNull ... style) {
         this.text = text;
         this.font = font;
@@ -33,6 +39,9 @@ public sealed class TextComponent implements Component permits ValueComponent {
         Collections.addAll(this.style, style);
     }
 
+    /// Updates the text of this component. Invalidates this component if the text is different.
+    ///
+    /// @param text The new text for this value
     public void text(@NotNull String text) {
         if(this.text.equals(text)) {
             return;
@@ -49,6 +58,9 @@ public sealed class TextComponent implements Component permits ValueComponent {
         metrics = null;
     }
 
+    /// Gets or computes and caches the {@link TextMetrics} for this component.
+    ///
+    /// @return The metrics for the current text
     @NotNull
     protected TextMetrics metrics() {
         if(metrics != null) {
@@ -58,6 +70,9 @@ public sealed class TextComponent implements Component permits ValueComponent {
         return metrics = font.metrics(text());
     }
 
+    /// Calculates the {@link TextMetrics} for given text using the current font.
+    ///
+    /// @return The {@link TextMetrics} for the provided text
     @NotNull
     protected TextMetrics metrics(@NotNull String text) {
         return font.metrics(text);
@@ -73,6 +88,9 @@ public sealed class TextComponent implements Component permits ValueComponent {
         return metrics().height();
     }
 
+    /// Gets the current text of this component.
+    ///
+    /// @return The current text
     @NotNull
     protected String text() {
         return text;

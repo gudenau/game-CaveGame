@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashSet;
 import java.util.Set;
 
+/// A simple mutable value implementation.
 sealed class MutableValue<T> implements Value<T> permits EnumValue {
     private final Set<Event<T>> handlers = new HashSet<>();
 

@@ -11,6 +11,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
+/// A WIP slider component.
+//TODO Finish documenting and finish the functionality
 public final class SliderComponent<T> implements Component {
     private static final int PADDING_WIDTH = 10;
     private static final int PADDING_HEIGHT = 9;
