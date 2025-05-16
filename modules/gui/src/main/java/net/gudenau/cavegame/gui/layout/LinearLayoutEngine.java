@@ -3,43 +3,31 @@ package net.gudenau.cavegame.gui.layout;
 import net.gudenau.cavegame.gui.Direction;
 import net.gudenau.cavegame.gui.component.Component;
 import net.gudenau.cavegame.gui.component.Container;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.ToIntFunction;
 
 /// A simple layout engine that places all elements in a row.
-//FIXME Make this immutable
 public final class LinearLayoutEngine implements LayoutEngine {
-    @Deprecated(forRemoval = true)
-    private static final Map<Direction.Axis, LinearLayoutEngine> INSTANCES = Map.of(
-        Direction.Axis.X, new LinearLayoutEngine(Direction.Axis.X),
-        Direction.Axis.Y, new LinearLayoutEngine(Direction.Axis.Y)
-    );
-
-    @Deprecated(forRemoval = true)
-    @NotNull
-    public static LinearLayoutEngine get(@NotNull Direction.Axis axis) {
-        return INSTANCES.get(axis);
-    }
-
     @NotNull
     private final Direction.Axis axis;
+    private final int minimumWidth;
+    private final int minimumHeight;
 
-    private int minimumWidth;
-    private int minimumHeight;
-
-    private LinearLayoutEngine(@NotNull Direction.Axis axis) {
-        this.axis = axis;
+    private LinearLayoutEngine(@NotNull Builder builder) {
+        this.axis = builder.axis;
+        this.minimumWidth = builder.width;
+        this.minimumHeight = builder.height;
     }
 
-    @Override
-    public void minimumSize(int width, int height) {
-        minimumWidth = width;
-        minimumHeight = height;
+    @Contract("_ -> new")
+    @NotNull
+    public static Builder builder(@NotNull Direction.Axis axis) {
+        return new Builder(axis);
     }
 
     @NotNull
@@ -75,5 +63,20 @@ public final class LinearLayoutEngine implements LayoutEngine {
             .orElse(0);
 
         return new Layout(Math.max(minimumWidth, width), Math.max(minimumHeight, height), List.copyOf(entries));
+    }
+
+    public static final class Builder extends LayoutEngine.Builder<LinearLayoutEngine> {
+        @NotNull
+        private final Direction.Axis axis;
+
+        private Builder(@NotNull Direction.Axis axis) {
+            this.axis = axis;
+        }
+
+        @Override
+        @NotNull
+        public LinearLayoutEngine build() {
+            return new LinearLayoutEngine(this);
+        }
     }
 }

@@ -2,6 +2,7 @@ package net.gudenau.cavegame.gui.layout;
 
 import net.gudenau.cavegame.gui.component.Component;
 import net.gudenau.cavegame.gui.component.Container;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -9,29 +10,26 @@ import java.util.SequencedCollection;
 import java.util.stream.IntStream;
 
 /// A simple grid {@link GridLayoutEngine}.
-//FIXME Make this immutable
 public final class GridLayoutEngine implements LayoutEngine {
     public static final int UNLIMITED = -1;
 
     private final int columns;
     private final int rows;
 
-    private int minimumWidth;
-    private int minimumHeight;
+    private final int minimumWidth;
+    private final int minimumHeight;
 
-    public GridLayoutEngine(int columns, int rows) {
-        if(columns == UNLIMITED && rows == UNLIMITED) {
-            throw new IllegalArgumentException("Columns and rows can't both be unlimited");
-        }
-
-        this.columns = columns;
-        this.rows = rows;
+    private GridLayoutEngine(@NotNull Builder builder) {
+        this.columns = builder.columns;
+        this.rows = builder.rows;
+        this.minimumWidth = builder.width;
+        this.minimumHeight = builder.height;
     }
 
-    @Override
-    public void minimumSize(int width, int height) {
-        minimumWidth = width;
-        minimumHeight = height;
+    @Contract("_, _ -> new")
+    @NotNull
+    public static Builder builder(int columns, int rows) {
+        return new Builder(columns, rows);
     }
 
     @Override
@@ -140,5 +138,25 @@ public final class GridLayoutEngine implements LayoutEngine {
             .toList();
 
         return new Layout(state.totalWidth(), state.totalHeight(), entries);
+    }
+
+    public final static class Builder extends LayoutEngine.Builder<GridLayoutEngine> {
+        private final int columns;
+        private final int rows;
+
+        private Builder(int columns, int rows) {
+            if(columns == UNLIMITED && rows == UNLIMITED) {
+                throw new IllegalArgumentException("Columns and rows can't both be unlimited");
+            }
+
+            this.columns = columns;
+            this.rows = rows;
+        }
+
+        @Override
+        @NotNull
+        public GridLayoutEngine build() {
+            return new GridLayoutEngine(this);
+        }
     }
 }

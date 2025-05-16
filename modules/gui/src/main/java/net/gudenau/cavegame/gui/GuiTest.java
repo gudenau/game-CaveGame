@@ -41,8 +41,9 @@ public final class GuiTest {
             var graphics = new AwtGraphics(640, 480);
             graphics.drawRectangle(0, 0, Integer.MAX_VALUE, Integer.MAX_VALUE, 0xFFFF00FF);
 
-            var layout = new GridLayoutEngine(1, GridLayoutEngine.UNLIMITED);
-            layout.minimumSize(graphics.width() / 2, graphics.height() / 2);
+            var layout = GridLayoutEngine.builder(1, GridLayoutEngine.UNLIMITED)
+                .minimumSize(graphics.width() / 2, graphics.height() / 2)
+                .build();
             var container = new Container(layout) {
                 @Override
                 public void invalidate() {
