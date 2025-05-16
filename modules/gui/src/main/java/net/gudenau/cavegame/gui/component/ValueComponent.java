@@ -1,6 +1,7 @@
 package net.gudenau.cavegame.gui.component;
 
 import net.gudenau.cavegame.gui.drawing.Font;
+import net.gudenau.cavegame.gui.drawing.FontStyle;
 import net.gudenau.cavegame.gui.drawing.TextMetrics;
 import net.gudenau.cavegame.gui.value.UniverseValue;
 import net.gudenau.cavegame.gui.value.Value;
@@ -19,7 +20,7 @@ public final class ValueComponent<T> extends TextComponent {
     /// @param value The value for the text of this component
     /// @param font The font to use to render this component
     /// @param style The style to use to render this component
-    public ValueComponent(@NotNull Value<T> value, @NotNull Font font, @NotNull Style @NotNull ... style) {
+    public ValueComponent(@NotNull Value<T> value, @NotNull Font font, @NotNull FontStyle style) {
         super("This text should never be seen", font, style);
 
         this.value = value;

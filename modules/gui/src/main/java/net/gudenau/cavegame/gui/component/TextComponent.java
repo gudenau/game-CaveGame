@@ -1,8 +1,6 @@
 package net.gudenau.cavegame.gui.component;
 
-import net.gudenau.cavegame.gui.drawing.DrawContext;
-import net.gudenau.cavegame.gui.drawing.Font;
-import net.gudenau.cavegame.gui.drawing.TextMetrics;
+import net.gudenau.cavegame.gui.drawing.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,14 +10,10 @@ import java.util.Optional;
 
 /// A basic text based {@link Component}.
 public sealed class TextComponent implements Component permits ValueComponent {
-    public enum Style {
-        CENTER_HORIZONTAL,
-    }
-
     @NotNull
     private final Font font;
     @NotNull
-    private final EnumSet<Style> style;
+    private final FontStyle style;
     @NotNull
     private String text;
     @Nullable
@@ -32,11 +26,10 @@ public sealed class TextComponent implements Component permits ValueComponent {
     /// @param text The text to be rendered
     /// @param font The font to use for rendering
     /// @param style The style to use for rendering
-    public TextComponent(@NotNull String text, @NotNull Font font, @NotNull Style @NotNull ... style) {
+    public TextComponent(@NotNull String text, @NotNull Font font, @NotNull FontStyle style) {
         this.text = text;
         this.font = font;
-        this.style = EnumSet.noneOf(Style.class);
-        Collections.addAll(this.style, style);
+        this.style = style;
     }
 
     /// Updates the text of this component. Invalidates this component if the text is different.
@@ -98,11 +91,7 @@ public sealed class TextComponent implements Component permits ValueComponent {
 
     @Override
     public void draw(@NotNull DrawContext context) {
-        int x = this.style.contains(Style.CENTER_HORIZONTAL) ?
-            (context.width() - width()) / 2 :
-            0;
-
-        context.drawText(x, metrics().ascent(), text(), 0xFF000000);
+        context.drawText(0, metrics().ascent(), context.width(), context.height(), text(), style);
     }
 
     @Override

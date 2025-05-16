@@ -1,9 +1,7 @@
 package net.gudenau.cavegame.gui;
 
 import net.gudenau.cavegame.gui.component.*;
-import net.gudenau.cavegame.gui.drawing.DrawContext;
-import net.gudenau.cavegame.gui.drawing.Font;
-import net.gudenau.cavegame.gui.drawing.TextMetrics;
+import net.gudenau.cavegame.gui.drawing.*;
 import net.gudenau.cavegame.gui.input.MouseButton;
 import net.gudenau.cavegame.gui.layout.GridLayoutEngine;
 import net.gudenau.cavegame.gui.value.Value;
@@ -52,16 +50,19 @@ public final class GuiTest {
                     frame.repaint();
                 }
             };
-            container.add(new TextComponent("Hello world!", graphics));
-            container.add(new TextComponent("Narrow", graphics));
-            container.add(new TextComponent("Centered", graphics, TextComponent.Style.CENTER_HORIZONTAL));
+            container.add(new TextComponent("Hello world!", graphics, FontStyle.of()));
+            container.add(new TextComponent("Narrow", graphics, FontStyle.of()));
+            container.add(new TextComponent("Centered", graphics, FontStyle.of(FontAttribute.horizontalAlignment(FontAttribute.Alignment.CENTER))));
 
             var buttonValue = Value.enumeration(Direction.RIGHT);
-            var button = container.add(new ButtonComponent<>(new ValueComponent<>(buttonValue, graphics)));
+            var button = container.add(new ButtonComponent<>(new ValueComponent<>(buttonValue, graphics, FontStyle.of(
+                FontAttribute.horizontalAlignment(FontAttribute.Alignment.CENTER),
+                FontAttribute.verticalAlignment(FontAttribute.Alignment.CENTER)
+            ))));
             button.action(buttonValue::next);
 
             var sliderValue = Value.enumeration(Direction.RIGHT);
-            container.add(new SliderComponent<>(new ValueComponent<>(sliderValue, graphics, TextComponent.Style.CENTER_HORIZONTAL)));
+            container.add(new SliderComponent<>(new ValueComponent<>(sliderValue, graphics, FontStyle.of(FontAttribute.horizontalAlignment(FontAttribute.Alignment.CENTER)))));
 
             frame.setSize(640, 480);
             frame.add(new JPanel() {
@@ -142,9 +143,30 @@ public final class GuiTest {
         }
 
         @Override
-        public void drawText(int x, int y, @NotNull String text, int color) {
+        public void drawText(int x, int y, int width, int height, @NotNull String text, @NotNull FontStyle style) {
             var graphics = canvas.graphics;
-            graphics.setColor(new Color(color, true));
+            graphics.setColor(new Color(style.get(FontAttribute.Color.class).color(), true));
+
+            if(width != -1 || height != -1) {
+                var metrics = metrics(text);
+
+                if(width != -1) {
+                    switch(style.get(FontAttribute.HorizontalAlignment.class).alignment()) {
+                        case NEG -> {}
+                        case CENTER -> x += (width - metrics.width()) / 2;
+                        case POS -> x += width - metrics.width();
+                    }
+                }
+
+                if(height != -1) {
+                    switch(style.get(FontAttribute.VerticalAlignment.class).alignment()) {
+                        case NEG -> {}
+                        case CENTER -> y += (height - metrics.height()) / 2;
+                        case POS -> y += height - metrics.height();
+                    }
+                }
+            }
+
             graphics.drawString(text, x, y);
         }
 

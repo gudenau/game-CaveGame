@@ -45,12 +45,12 @@ public interface DrawContext {
     /// @param color The color of the rectangle in 0xAARRGGBB format.
     void drawRectangle(int x, int y, int width, int height, int color);
 
-    /// Draws text to the screen.
-    ///
-    /// @param x The X position of the text
-    /// @param y The Y position of the text
-    /// @param color The color of the text in 0xAARRGGBB format.
-    void drawText(int x, int y, @NotNull String text, int color);
+
+    default void drawText(int x, int y, @NotNull String text, @NotNull FontStyle style) {
+        drawText(x, y, -1, -1, text, style);
+    }
+
+    void drawText(int x, int y, int width, int height, @NotNull String text, @NotNull FontStyle style);
 
     /// Draws a graphic to the screen.
     ///
