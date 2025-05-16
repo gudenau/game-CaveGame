@@ -3,6 +3,7 @@ package net.gudenau.cavegame.gui;
 import net.gudenau.cavegame.gui.component.*;
 import net.gudenau.cavegame.gui.drawing.DrawContext;
 import net.gudenau.cavegame.gui.drawing.Font;
+import net.gudenau.cavegame.gui.drawing.TextMetrics;
 import net.gudenau.cavegame.gui.input.MouseButton;
 import net.gudenau.cavegame.gui.layout.GridLayoutEngine;
 import net.gudenau.cavegame.gui.value.Value;
@@ -168,15 +169,7 @@ public final class GuiTest {
 
         @Override
         public void drawImage(@NotNull Identifier identifier, int x, int y, int width, int height, int u, int v, int uWidth, int uHeight, int textureWidth, int textureHeight) {
-            if(false) {
-                return;
-            }
-
             var image = loadImage(identifier);
-
-            if(width == 0 || height == 0 || uWidth == 0 || uHeight == 0) {
-                getClass();
-            }
 
             int imageXOff = (int) ((u / (double) textureWidth) * image.getWidth());
             int imageYOff = (int) ((v / (double) textureHeight) * image.getHeight());
@@ -189,9 +182,9 @@ public final class GuiTest {
 
         @Override
         @NotNull
-        public Bounds stringBounds(@NotNull String text) {
+        public TextMetrics lineMetrics(@NotNull String text) {
             var bounds = canvas.graphics.getFontMetrics().getStringBounds(text, canvas.graphics);
-            return new Bounds((int) bounds.getWidth(), (int) bounds.getHeight());
+            return new TextMetrics(ascent(), (int) bounds.getWidth(), (int) bounds.getHeight());
         }
 
         @Override

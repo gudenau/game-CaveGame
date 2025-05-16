@@ -1,7 +1,6 @@
 package net.gudenau.cavegame.gui.drawing;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /// The size and other information about a block of text required to render it.
 ///
@@ -21,23 +20,6 @@ public record TextMetrics(int ascent, int width, int height) {
     @Deprecated(forRemoval = true)
     @NotNull
     public static TextMetrics of(@NotNull Font font, @NotNull String text) {
-        if(text.isBlank()) {
-            return new TextMetrics(0, 0, 0);
-        }
-
-        var bounds = text.lines()
-            .map(font::stringBounds)
-            .reduce((a, b) -> new Font.Bounds(
-                Math.max(a.width(), b.width()),
-                a.height() + b.height()
-            ))
-            .orElse(null);
-
-        // Shouldn't be hit, but we need to be sure
-        if(bounds == null) {
-            return BLANK;
-        }
-
-        return new TextMetrics(font.ascent(), bounds.width(), bounds.height());
+        return font.metrics(text);
     }
 }
