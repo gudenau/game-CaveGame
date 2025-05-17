@@ -6,6 +6,7 @@ import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.util.SharedLock;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.VkAllocationCallbacks;
 
@@ -16,12 +17,14 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public final class VulkanAllocator {
     private static final boolean ENABLED = Config.DEBUG_VULKAN_ALLOCATOR.get();
 
-    private static final VkAllocationCallbacks CALLBACKS = VkAllocationCallbacks.calloc()
+    @Nullable
+    private static final VkAllocationCallbacks CALLBACKS = ENABLED ? VkAllocationCallbacks.calloc()
         .pfnAllocation(VulkanAllocator::allocate)
         .pfnReallocation(VulkanAllocator::reallocate)
-        .pfnFree(VulkanAllocator::free);
+        .pfnFree(VulkanAllocator::free)
+        : null;
 
-    @NotNull
+    @Nullable
     public static VkAllocationCallbacks get() {
         return CALLBACKS;
     }
