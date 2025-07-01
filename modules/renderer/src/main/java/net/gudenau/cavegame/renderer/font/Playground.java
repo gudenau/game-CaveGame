@@ -1,3 +1,5 @@
+// Uses AWT, unused but I don't want to delete it until font rendering is properly finalized.
+/*
 package net.gudenau.cavegame.renderer.font;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -56,7 +58,7 @@ public class Playground {
 
                     /* TODO Replace the n call for this when the bindings are corrected
                     var harfBuzzFont = hb_ft_font_create(freeTypeFace.address(), null);
-                     */
+                     * /
                     var harfBuzzFont = nhb_ft_font_create(freeTypeFace.address(), NULL);
 
                     try {
@@ -203,3 +205,4 @@ public class Playground {
         }
     }
 }
+*/

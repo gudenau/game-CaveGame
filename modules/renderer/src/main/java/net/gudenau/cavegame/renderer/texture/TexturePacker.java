@@ -2,8 +2,6 @@ package net.gudenau.cavegame.renderer.texture;
 
 import org.jetbrains.annotations.NotNull;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -216,6 +214,9 @@ public final class TexturePacker<T> {
     }
 
     public void save(@NotNull RowGetter<T> getter, @NotNull Path destination) {
+        throw new UnsupportedOperationException("Implement texture atlas saving");
+
+        /* TODO Texture atlas saving
         if(dirty) {
             throw new IllegalStateException("Can not save a dirty atlas");
         }
@@ -244,6 +245,7 @@ public final class TexturePacker<T> {
         } catch(IOException e) {
             throw new RuntimeException("Failed to save atlas to " + destination, e);
         }
+         */
     }
 
     public int width() {

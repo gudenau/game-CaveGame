@@ -1,15 +1,15 @@
 package net.gudenau.cavegame.renderer.texture;
 
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.util.spng.spng_ihdr;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
-import java.awt.image.DataBufferInt;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
+
+import static org.lwjgl.system.MemoryUtil.NULL;
+import static org.lwjgl.util.spng.SPNG.*;
 
 public final class PngReader {
     private PngReader() {
@@ -18,80 +18,37 @@ public final class PngReader {
 
     @NotNull
     public static NativeTexture read(@NotNull ByteBuffer fileBuffer, @NotNull TextureFormat format) throws IOException {
-        //FIXME Find a replacement to AWT, STB is unsafe.
+        var context = spng_ctx_new(0);
+        try(var stack = MemoryStack.stackPush()) {
+            spng_set_png_buffer(context, fileBuffer);
 
-        // Read the image from the buffer via AWT
-        var stream = new InputStream() {
-            private final ByteBuffer buffer = fileBuffer.slice();
+            var header = spng_ihdr.calloc(stack);
+            spng_get_ihdr(context, header);
 
-            @Override
-            public int read() {
-                return buffer.hasRemaining() ? buffer.get() & 0xFF : -1;
+            var width = header.width();
+            var height = header.height();
+
+            var spngFormat = switch(format) {
+                case RGBA -> SPNG_FMT_RGBA8;
+                case RGB -> SPNG_FMT_RGB8;
+                case GRAYSCALE -> SPNG_FMT_G8;
+            };
+
+            var sizePointer = stack.pointers(NULL);
+            spng_decoded_image_size(context, spngFormat, sizePointer);
+            var size = sizePointer.get(0);
+
+            //TODO Find a better limit for the max image size
+            if(size > Integer.MAX_VALUE) {
+                throw new IOException("Decoded image would be too large!");
             }
 
-            @Override
-            public int read(byte @NotNull [] b, int off, int len) {
-                int size = Math.min(len, buffer.remaining());
-                buffer.get(b, off, size);
-                return size;
-            }
-        };
+            var pixels = MemoryUtil.memAlloc((int) size);
+            spng_decode_image(context, pixels, spngFormat, 0);
 
-        var rawImage = ImageIO.read(stream);
-
-        var desiredType = switch(format) {
-            case RGBA -> BufferedImage.TYPE_4BYTE_ABGR;
-            case RGB -> BufferedImage.TYPE_3BYTE_BGR;
-            case GRAYSCALE -> BufferedImage.TYPE_BYTE_GRAY;
-        };
-
-        var width = rawImage.getWidth();
-        var height = rawImage.getHeight();
-
-        // Convert the AWT image, if required
-        BufferedImage convertedImage;
-        if(rawImage.getType() != desiredType) {
-            convertedImage = new BufferedImage(width, height, desiredType);
-            var graphics = convertedImage.createGraphics();
-            try {
-                graphics.drawImage(rawImage, 0, 0, width, height, null);
-            } finally {
-                graphics.dispose();
-            }
-        } else {
-            convertedImage = rawImage;
+            return NativeTexture.of(width, height, format, pixels, () -> MemoryUtil.memFree(pixels));
+        } finally {
+            spng_ctx_free(context);
         }
-
-        // Copy the data out of the AWT image
-        var size = width * height * format.size();
-        var result = MemoryUtil.memAlloc(size);
-        var dataBuffer = convertedImage.getRaster().getDataBuffer();
-
-        switch(dataBuffer) {
-            case DataBufferByte byteBuffer -> {
-                result.put(0, byteBuffer.getData());
-
-                // Swap bytes around
-                switch(format) {
-                    case RGBA -> {
-                        for(int i = 0; i < size; i += 4) {
-                            result.putInt(i, Integer.reverseBytes(result.getInt(i)));
-                        }
-                    }
-
-                    case RGB -> {
-                        for(int i = 0; i < size; i += 3) {
-                            byte tmp = result.get(i);
-                            result.put(i, result.get(i + 2));
-                            result.put(i + 2, tmp);
-                        }
-                    }
-                }
-            }
-            case DataBufferInt intBuffer -> result.asIntBuffer().put(0, intBuffer.getData());
-            default -> throw new RuntimeException("Don't know how to handle " + dataBuffer.getClass().getSimpleName());
-        }
-
-        return NativeTexture.of(width, height, format, result, () -> MemoryUtil.memFree(result));
     }
 }

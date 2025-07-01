@@ -1,4 +1,4 @@
-package net.gudenau.cavegame.wooting.internal;
+package net.gudenau.cavegame.panama;
 
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -13,6 +13,7 @@ import java.util.List;
 /**
  * A basic helper class to create structure layouts for the foreign memory API.
  */
+@Deprecated(forRemoval = true)
 public final class NativeLayout {
     /**
      * The layout of the created structure.
@@ -113,6 +114,19 @@ public final class NativeLayout {
         }
 
         /**
+         * Adds a new named 8 bit member to this layout.
+         *
+         * @param name The name of the member
+         * @return This builder
+         */
+        @NotNull
+        @Contract("_ -> this")
+        public Builder u8(@NotNull String name) {
+            elements.add(ValueLayout.JAVA_BYTE.withName(name));
+            return this;
+        }
+
+        /**
          * Adds a new named 16 bit member to this layout.
          *
          * @param name The name of the member
@@ -122,6 +136,19 @@ public final class NativeLayout {
         @Contract("_ -> this")
         public Builder u16(@NotNull String name) {
             elements.add(ValueLayout.JAVA_SHORT.withName(name));
+            return this;
+        }
+
+        /**
+         * Adds a new named 32 bit member to this layout.
+         *
+         * @param name The name of the member
+         * @return This builder
+         */
+        @NotNull
+        @Contract("_ -> this")
+        public Builder u32(@NotNull String name) {
+            elements.add(ValueLayout.JAVA_INT.withName(name));
             return this;
         }
 

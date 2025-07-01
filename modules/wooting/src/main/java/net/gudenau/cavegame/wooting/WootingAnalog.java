@@ -1,7 +1,7 @@
 package net.gudenau.cavegame.wooting;
 
+import net.gudenau.cavegame.panama.NativeUtils;
 import net.gudenau.cavegame.wooting.internal.Dummy;
-import net.gudenau.cavegame.wooting.internal.NativeUtils;
 import org.intellij.lang.annotations.MagicConstant;
 
 import java.lang.foreign.MemorySegment;

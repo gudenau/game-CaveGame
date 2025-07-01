@@ -6,13 +6,11 @@ import net.gudenau.cavegame.codec.Codec;
 import net.gudenau.cavegame.codec.CodecBuilder;
 import net.gudenau.cavegame.codec.CodecResult;
 import net.gudenau.cavegame.codec.ops.JsonOps;
-import net.gudenau.cavegame.renderer.texture.TextureFormat;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.JFormattedTextField;
 import java.io.IOException;
 import java.util.Map;
 

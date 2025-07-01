@@ -1,7 +1,7 @@
 package net.gudenau.cavegame.wooting;
 
-import net.gudenau.cavegame.wooting.internal.NativeLayout;
-import net.gudenau.cavegame.wooting.internal.NativeUtils;
+import net.gudenau.cavegame.panama.NativeLayout;
+import net.gudenau.cavegame.panama.NativeUtils;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

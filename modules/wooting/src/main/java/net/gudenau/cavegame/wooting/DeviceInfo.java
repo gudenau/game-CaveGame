@@ -1,6 +1,6 @@
 package net.gudenau.cavegame.wooting;
 
-import net.gudenau.cavegame.wooting.internal.NativeUtils;
+import net.gudenau.cavegame.panama.NativeUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.foreign.MemorySegment;

@@ -3,14 +3,10 @@ package net.gudenau.cavegame.renderer.texture;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryUtil;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 
 public final class NativeTexture implements Texture {
@@ -21,9 +17,7 @@ public final class NativeTexture implements Texture {
 
     @NotNull
     public static NativeTexture read(@NotNull ByteBuffer buffer, @NotNull TextureFormat format) throws IOException {
-        @SuppressWarnings("resource") // Idea is being too aggressive here, we pass this to the image right away
-        var result = PngReader.read(buffer, format);
-        return new NativeTexture(result.width(), result.height(), format, result.pixels(), result::close);
+        return PngReader.read(buffer, format);
     }
 
     @NotNull
@@ -64,45 +58,7 @@ public final class NativeTexture implements Texture {
 
     //TODO Replace this with something that isn't AWT (Apple breaks it)/STB (maintainer hates security)
     public void save(@NotNull Path destination) throws IOException {
-        @FunctionalInterface
-        interface Converter {
-            void convert(int y, int[] row);
-        }
-        Converter converter = switch(format) {
-            case RGBA -> (y, row) -> {
-                pixels.asIntBuffer().get(y * width, row);
-            };
-            case RGB -> (y, row) -> {
-                int index = y * width * 3;
-                for(int x = 0; x < width; x++) {
-                    var red = Byte.toUnsignedInt(pixels.get(index++));
-                    var green = Byte.toUnsignedInt(pixels.get(index++));
-                    var blue = Byte.toUnsignedInt(pixels.get(index++));
-                    row[x] = 0xFF_00_00_00 | (red << 16) | (green << 8) | blue;
-                }
-            };
-            case GRAYSCALE -> (y, row) -> {
-                int offset = y * width;
-                for(int x = 0; x < width; x++) {
-                    var value = Byte.toUnsignedInt(pixels.get(offset + x));
-                    value <<= 24;
-                    value |= 0x00_FF_FF_FF;
-                    row[x] = value;
-                }
-            };
-        };
-
-        var image = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
-        var row = new int[width];
-
-        for(int y = 0; y < height; y++) {
-            converter.convert(y, row);
-            image.setRGB(0, y, width, 1, row, 0, width);
-        }
-
-        try(var stream = Files.newOutputStream(destination, StandardOpenOption.CREATE)) {
-            ImageIO.write(image, "PNG", stream);
-        }
+        throw new UnsupportedOperationException("Implement image saving with SPNG");
     }
 
     public void blit(int x, int y, @NotNull NativeTexture texture) {

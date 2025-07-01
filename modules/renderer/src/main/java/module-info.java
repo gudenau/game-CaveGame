@@ -9,9 +9,6 @@ module net.gudenau.cavegame.renderer {
 
     uses RendererInfo;
 
-    //FIXME Remove this once PngReader is no longer using AWT
-    requires java.desktop;
-
     requires static org.jetbrains.annotations;
 
     requires it.unimi.dsi.fastutil;
@@ -22,6 +19,7 @@ module net.gudenau.cavegame.renderer {
     requires org.lwjgl.freetype;
     requires org.lwjgl.glfw;
     requires org.lwjgl.harfbuzz;
+    requires org.lwjgl.spng;
 
     requires net.gudenau.cavegame.logger;
     requires net.gudenau.cavegame.utilities;

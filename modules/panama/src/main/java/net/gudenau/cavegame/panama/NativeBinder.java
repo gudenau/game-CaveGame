@@ -42,7 +42,13 @@ public final class NativeBinder {
         return bind(name, result == null ? FunctionDescriptor.ofVoid(args) : FunctionDescriptor.of(result, args));
     }
 
-    public MemorySegment callback(MethodHandle methodHandle, FunctionDescriptor descriptor, @NotNull Arena arena) {
+    @NotNull
+    public static MemorySegment callback(@NotNull MethodHandle methodHandle, @NotNull FunctionDescriptor descriptor, @NotNull Arena arena) {
         return LINKER.upcallStub(methodHandle, descriptor, arena);
+    }
+
+    @NotNull
+    public static MethodHandle bind(@NotNull FunctionDescriptor descriptor) {
+        return LINKER.downcallHandle(descriptor);
     }
 }

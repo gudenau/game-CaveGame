@@ -2,12 +2,15 @@ package net.gudenau.cavegame.panama;
 
 import net.gudenau.cavegame.util.MiscUtils;
 import net.gudenau.cavegame.util.Treachery;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.Platform;
 
 import java.io.IOException;
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
+import java.nio.Buffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -94,7 +97,7 @@ public final class NativeUtils {
                 input.transferTo(output);
            }
         } catch(IOException e) {
-            throw new RuntimeException("Failed to extract natives for " + module.getName());
+            throw new RuntimeException("Failed to extract natives for " + module.getName(), e);
         }
 
         return new NativeBinder(path);
@@ -111,5 +114,62 @@ public final class NativeUtils {
         } catch(Throwable e) {
             throw new RuntimeException("Failed to enable native access for module " + module.getName(), e);
         }
+    }
+
+    /**
+     * Ensures that a MemorySegment is both non-null in Java land and C land.
+     *
+     * @param segment The segment to check
+     * @param message The message to pass to the exception
+     * @return The passed segment
+     */
+    @Contract("_, _ -> param1")
+    @NotNull
+    @SuppressWarnings("ConstantValue")
+    public static MemorySegment ensureNonNull(@NotNull MemorySegment segment, @NotNull String message) {
+        if(segment == null || segment.equals(MemorySegment.NULL)) {
+            throw new NullPointerException(message);
+        }
+        return segment;
+    }
+
+    /**
+     * Gets a String or null from the passed memory segment.
+     *
+     * @param pointer The segment to read
+     * @return The string or null
+     */
+    @Nullable
+    public static String string(@NotNull MemorySegment pointer) {
+        //TODO Find a better way, this is hacky.
+        if (pointer.equals(MemorySegment.NULL)) {
+            return null;
+        }
+        return pointer.reinterpret(Long.MAX_VALUE).getString(0);
+    }
+
+    /**
+     * Gets the {@link MemorySegment} from the provided {@link Buffer}. The buffer must be direct and be read-write.
+     *
+     * @param buffer The buffer to get
+     * @return The resulting segment
+     */
+    @NotNull
+    public static MemorySegment segment(@Nullable Buffer buffer) {
+        if(buffer == null) {
+            return MemorySegment.NULL;
+        }
+        if(!buffer.isDirect()) {
+            throw new IllegalArgumentException(buffer.getClass().getSimpleName() + " must be direct");
+        }
+        if(buffer.isReadOnly()) {
+            throw new IllegalArgumentException(buffer.getClass().getSimpleName() + " must be writeable");
+        }
+        return MemorySegment.ofBuffer(buffer);
+    }
+
+    @NotNull
+    public static MemoryLayout struct(@NotNull MemoryLayout @NotNull ... elements) {
+        return MemoryLayout.structLayout(elements);
     }
 }
