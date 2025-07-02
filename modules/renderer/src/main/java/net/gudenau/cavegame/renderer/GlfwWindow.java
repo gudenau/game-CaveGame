@@ -1,21 +1,24 @@
 package net.gudenau.cavegame.renderer;
 
+import net.gudenau.cavegame.renderer.screen.Screen;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Stack;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public abstract class GlfwWindow implements Window {
-
     private boolean visible = false;
     private final GLFWFramebufferSizeCallback glfwResizeCallback;
     @Nullable
     private ResizeCallback resizeCallback = null;
+    private final Stack<Screen> screenStack = new Stack<>();
 
     private final long handle;
 
@@ -112,6 +115,27 @@ public abstract class GlfwWindow implements Window {
                 return new Size(width.get(0), height.get(0));
             }
         });
+    }
+
+    @Override
+    public void pushScreen(@NotNull Screen screen) {
+        screenStack.push(screen);
+    }
+
+    @Override
+    @NotNull
+    public Screen popScreen(boolean close) {
+        var screen = screenStack.pop();
+        if(close) {
+            screen.close();
+        }
+        return screen;
+    }
+
+    @Override
+    @NotNull
+    public Optional<Screen> currentScreen() {
+        return screenStack.isEmpty() ? Optional.empty() : Optional.of(screenStack.peek());
     }
 
     @Override

@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.*;
+import net.gudenau.cavegame.renderer.screen.Screen;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.renderer.shader.ShaderMeta;
 import net.gudenau.cavegame.renderer.texture.Texture;
@@ -35,6 +36,8 @@ public final class VkRenderer implements Renderer {
     private int currentSemaphore = 0;
     private boolean framebufferResized = false;
 
+    @NotNull
+    private final VkWindow window;
     @NotNull
     private final VulkanInstance instance;
     @Nullable
@@ -119,6 +122,8 @@ public final class VkRenderer implements Renderer {
     }
 
     public VkRenderer(@NotNull VkWindow window) {
+        this.window = window;
+
         try(var stack = MemoryStack.stackPush()) {
             window.resizeCallback((_, _, _) -> framebufferResized = true);
 
@@ -433,6 +438,22 @@ public final class VkRenderer implements Renderer {
     @Override
     public VkGraphicsBuffer createBuffer(@NotNull BufferType type, int size) {
         return new VkGraphicsBuffer(logicalDevice, commandPool, type, size);
+    }
+
+    @Override
+    @NotNull
+    public Window window() {
+        return window;
+    }
+
+    @Override
+    public void drawScreen(@NotNull Screen screen) {
+        begin();
+        try {
+            screen.draw(this);
+        } finally {
+            draw();
+        }
     }
 
     @NotNull

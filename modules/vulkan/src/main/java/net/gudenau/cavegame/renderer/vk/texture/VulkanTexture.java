@@ -18,6 +18,9 @@ public sealed class VulkanTexture implements Texture permits VulkanAtlasedTextur
         DISABLE_MIPMAP,
     }
 
+    @NotNull
+    private final VulkanTextureManager textureManager;
+
     private final VulkanLogicalDevice device;
 
     private final VulkanSampler sampler;
@@ -47,6 +50,8 @@ public sealed class VulkanTexture implements Texture permits VulkanAtlasedTextur
         @NotNull NativeTexture imageResult,
         @NotNull Set<@NotNull Flag> flags
     ) {
+        this.textureManager = textureManager;
+
         width = imageResult.width();
         height = imageResult.height();
         format = switch(imageResult.format()) {
@@ -306,6 +311,8 @@ public sealed class VulkanTexture implements Texture permits VulkanAtlasedTextur
 
     @Override
     public void close() {
+        textureManager.removeTexture(this);
+
         imageView.close();
         image.close();
     }

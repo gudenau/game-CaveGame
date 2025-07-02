@@ -3,6 +3,7 @@ import net.gudenau.cavegame.renderer.RendererInfo;
 module net.gudenau.cavegame.renderer {
     exports net.gudenau.cavegame.renderer;
     exports net.gudenau.cavegame.renderer.model;
+    exports net.gudenau.cavegame.renderer.screen;
     exports net.gudenau.cavegame.renderer.shader;
     exports net.gudenau.cavegame.renderer.texture;
     exports net.gudenau.cavegame.renderer.font;

@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer;
 
+import net.gudenau.cavegame.renderer.screen.Screen;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.renderer.texture.TextureManager;
@@ -27,4 +28,12 @@ public interface Renderer extends AutoCloseable {
     void waitForIdle();
 
     @NotNull TextureManager textureManager();
+
+    @NotNull Window window();
+
+    default void drawScreen() {
+        window().currentScreen().ifPresent(this::drawScreen);
+    }
+
+    void drawScreen(@NotNull Screen screen);
 }

@@ -2,23 +2,16 @@ package net.gudenau.cavegame;
 
 import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.logger.Logger;
-import net.gudenau.cavegame.renderer.BufferBuilder;
-import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.GlfwUtils;
 import net.gudenau.cavegame.renderer.RendererInfo;
 import net.gudenau.cavegame.renderer.font.HarfBuzzFont;
-import net.gudenau.cavegame.renderer.model.ObjLoader;
-import net.gudenau.cavegame.renderer.texture.Font;
-import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
+import net.gudenau.cavegame.screen.VikingScreen;
 import net.gudenau.cavegame.util.Closer;
 import net.gudenau.cavegame.util.MiscUtils;
 import org.lwjgl.system.Configuration;
-
-import java.io.IOException;
-import java.util.Map;
 
 public final class CaveGame {
     static {
@@ -77,53 +70,25 @@ public final class CaveGame {
         try(var closer = new Closer()) {
             var window = closer.add(rendererInfo.createWindow("CaveGame", 640, 480));
             var renderer = closer.add(rendererInfo.createRenderer(window));
-            var textureManager = renderer.textureManager();
 
             window.bind();
 
-            Texture texture;
-            try {
-                texture = textureManager.loadTexture(new Identifier(NAMESPACE, "viking_room"));
-            } catch(IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            Font font;
-            try {
-                font = textureManager.loadFont(new Identifier(NAMESPACE, "fira_sans_regular"));
-            } catch(IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            var basicShader = closer.add(renderer.loadShader(
-                new Identifier(Identifier.CAVEGAME_NAMESPACE, "basic"),
-                Map.of("texSampler", texture)
-            ));
-
-            BufferBuilder builder;
-            try {
-                builder = ObjLoader.load(basicShader.builder(), new Identifier(NAMESPACE, "viking_room"));
-            } catch(IOException e) {
-                throw new RuntimeException(e);
-            }
-            var vertexCount = builder.vertexCount();
-            var triangleBuffers = builder.build();
-            var vertexBuffer = triangleBuffers.get(BufferType.VERTEX);
-            var indexBuffer = triangleBuffers.get(BufferType.INDEX);
-            closer.add(vertexBuffer, indexBuffer);
+            window.pushScreen(new VikingScreen(renderer));
 
             window.visible(true);
 
             do {
-                renderer.begin();
-                renderer.drawBuffer(vertexCount, vertexBuffer, indexBuffer);
-                renderer.draw();
+                renderer.drawScreen();
 
                 window.flip();
                 GlfwUtils.poll();
             } while(!window.closeRequested());
 
             renderer.waitForIdle();
+
+            while(window.currentScreen().isPresent()) {
+                window.popScreen();
+            }
         }
     }
 }

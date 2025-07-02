@@ -2,6 +2,7 @@ package net.gudenau.cavegame.renderer.vk.texture;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.BufferType;
 import net.gudenau.cavegame.renderer.font.FreeTypeFont;
 import net.gudenau.cavegame.renderer.texture.*;
@@ -17,6 +18,7 @@ import org.lwjgl.system.MemoryUtil;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public final class VulkanTextureManager implements TextureManager, AutoCloseable {
     private final VkRenderer renderer;
@@ -32,7 +34,18 @@ public final class VulkanTextureManager implements TextureManager, AutoCloseable
     }
 
     public void close() {
-        textures.values().forEach(VulkanTexture::close);
+        List.copyOf(textures.values()).forEach(VulkanTexture::close);
+        if(!textures.isEmpty()) {
+            Logger.forClass(VulkanTextureManager.class)
+                .warn(
+                    "Not all textures got cleaned up: " +
+                        textures.keySet()
+                            .stream()
+                            .map(Identifier::toString)
+                            .collect(Collectors.joining(", "))
+                );
+        }
+
         samplers.values().forEach(VulkanSampler::close);
     }
 
@@ -197,5 +210,18 @@ public final class VulkanTextureManager implements TextureManager, AutoCloseable
             return sampler;
         }
         return samplers$lock.write(() -> samplers.computeIfAbsent(mipLevels, (level) -> new VulkanSampler(renderer.logicalDevice(), mipLevels)));
+    }
+
+    public void removeTexture(@NotNull VulkanTexture texture) {
+        var keys = textureLock.read(() -> textures.entrySet()
+            .stream()
+            .filter((e) -> e.getValue() == texture)
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toUnmodifiableSet())
+        );
+
+        textureLock.write(() ->
+            keys.forEach((key) -> textures.remove(key, texture))
+        );
     }
 }
