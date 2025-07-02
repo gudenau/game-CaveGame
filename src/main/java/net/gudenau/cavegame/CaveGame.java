@@ -16,13 +16,8 @@ import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.util.Closer;
 import net.gudenau.cavegame.util.MiscUtils;
 import org.lwjgl.system.Configuration;
-import org.lwjgl.system.MemoryUtil;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 
 public final class CaveGame {

@@ -32,7 +32,7 @@ public final class VkRenderer implements Renderer {
 
     private static final int MAX_FRAMES_IN_FLIGHT = 2;
     private int currentFrame = 0;
-    private int realCurrentFrame = 0;
+    private int currentSemaphore = 0;
     private boolean framebufferResized = false;
 
     @NotNull
@@ -52,7 +52,7 @@ public final class VkRenderer implements Renderer {
     @NotNull
     private final VulkanRenderPass renderPass;
     @NotNull
-    private List<@NotNull VulkanFramebuffer> swapchainFramebuffers;
+    private List<@NotNull SwapChainState> swapChainState;
     @NotNull
     private final VulkanCommandPool commandPool;
     @NotNull
@@ -70,11 +70,30 @@ public final class VkRenderer implements Renderer {
         return physicalDevice;
     }
 
+    private record SwapChainState(
+        @NotNull VulkanFramebuffer framebuffer,
+        @NotNull VulkanSemaphore imageAvailableSemaphore,
+        @NotNull VulkanSemaphore renderFinishedSemaphore
+    ) implements AutoCloseable {
+        SwapChainState(VulkanFramebuffer framebuffer) {
+            this(
+                framebuffer,
+                new VulkanSemaphore(framebuffer.device()),
+                new VulkanSemaphore(framebuffer.device())
+            );
+        }
+
+        @Override
+        public void close() {
+            framebuffer.close();
+            imageAvailableSemaphore.close();
+            renderFinishedSemaphore.close();
+        }
+    }
+
     private record FrameState(
         int index,
         @NotNull VulkanCommandBuffer commandBuffer,
-        @NotNull VulkanSemaphore imageAvailableSemaphore,
-        @NotNull VulkanSemaphore renderFinishedSemaphore,
         @NotNull VulkanFence inFlightFence,
         @NotNull GraphicsBuffer uniformBuffer
     ) implements AutoCloseable {
@@ -82,8 +101,6 @@ public final class VkRenderer implements Renderer {
         public void close() {
             uniformBuffer.close();
             commandBuffer.close();
-            imageAvailableSemaphore.close();
-            renderFinishedSemaphore.close();
             inFlightFence.close();
         }
     }
@@ -96,8 +113,6 @@ public final class VkRenderer implements Renderer {
         return new FrameState(
             index,
             new VulkanCommandBuffer(device, commandPool),
-            new VulkanSemaphore(device),
-            new VulkanSemaphore(device),
             new VulkanFence(device),
             createBuffer(BufferType.UNIFORM, Float.BYTES * 4 * 4 * 3)
         );
@@ -125,17 +140,18 @@ public final class VkRenderer implements Renderer {
 
             renderPass = new VulkanRenderPass(logicalDevice, swapchain, depthBuffer);
 
-            swapchainFramebuffers = imageViews.stream()
+            swapChainState = imageViews.stream()
                 .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, depthBuffer, colorBuffer))
+                .map(SwapChainState::new)
                 .toList();
 
             descriptorPool = new VulkanDescriptorPool(
                 logicalDevice,
-                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT),
-                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT)
+                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, swapChainState.size()),
+                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, swapChainState.size())
             );
 
-            frameState = IntStream.range(0, MAX_FRAMES_IN_FLIGHT)
+            frameState = IntStream.range(0, swapChainState.size())
                 .mapToObj((index) -> createFrameState(index, logicalDevice, commandPool))
                 .toList();
 
@@ -162,7 +178,7 @@ public final class VkRenderer implements Renderer {
     private void destroySwapChain() {
         colorBuffer.close();
         depthBuffer.close();
-        swapchainFramebuffers.forEach(VulkanFramebuffer::close);
+        swapChainState.forEach(SwapChainState::close);
         imageViews.forEach(VulkanImageView::close);
         swapchain.close();
     }
@@ -180,8 +196,9 @@ public final class VkRenderer implements Renderer {
                 .toList();
             colorBuffer = new VulkanImageBuffer(logicalDevice, swapchain, swapchain.imageFormat(), VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
             depthBuffer = new VulkanImageBuffer(logicalDevice, swapchain, findDepthFormat(physicalDevice), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-            swapchainFramebuffers = imageViews.stream()
+            swapChainState = imageViews.stream()
                 .map((view) -> new VulkanFramebuffer(logicalDevice, swapchain, renderPass, view, depthBuffer, colorBuffer))
+                .map(SwapChainState::new)
                 .toList();
         }
     }
@@ -212,11 +229,9 @@ public final class VkRenderer implements Renderer {
     @Override
     public void begin() {
         currentFrameState = this.frameState.get(currentFrame);
-        realCurrentFrame = currentFrame;
-        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
         var commandBuffer = currentFrameState.commandBuffer();
-        var imageAvailableSemaphore = currentFrameState.imageAvailableSemaphore();
+        var imageAvailableSemaphore = swapChainState.get(currentSemaphore).imageAvailableSemaphore();
         var inFlightFence = currentFrameState.inFlightFence();
 
         inFlightFence.yield();
@@ -280,14 +295,14 @@ public final class VkRenderer implements Renderer {
     @Override
     public void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer) {
         var commandBuffer = currentFrameState.commandBuffer;
-        commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapchainFramebuffers.get(currentImageIndex));
+        commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapChainState.get(currentImageIndex).framebuffer());
         var vulkanShader = (VkShader) vertexBuffer.shader();
         commandBuffer.bindPipeline(vulkanShader.pipeline());
         commandBuffer.setViewport(swapchain.extent().width(), swapchain.extent().height());
         commandBuffer.setScissor(0, 0, swapchain.extent().width(), swapchain.extent().height());
         commandBuffer.bindVertexBuffer((VkGraphicsBuffer) vertexBuffer);
         var pipeline = vulkanShader.pipeline();
-        commandBuffer.bindDescriptorSets(pipeline.layout(), pipeline.descriptorSet(realCurrentFrame));
+        commandBuffer.bindDescriptorSets(pipeline.layout(), pipeline.descriptorSet(currentFrame));
         if(indexBuffer != null) {
             commandBuffer.bindIndexBuffer((VkGraphicsBuffer) indexBuffer);
             commandBuffer.drawIndexed(vertexCount, 1, 0, 0, 0);
@@ -299,8 +314,8 @@ public final class VkRenderer implements Renderer {
     @Override
     public void draw() {
         var commandBuffer = currentFrameState.commandBuffer();
-        var renderFinishedSemaphore = currentFrameState.renderFinishedSemaphore();
-        var imageAvailableSemaphore = currentFrameState.imageAvailableSemaphore();
+        var renderFinishedSemaphore = swapChainState.get(currentImageIndex).renderFinishedSemaphore();
+        var imageAvailableSemaphore = swapChainState.get(currentSemaphore).imageAvailableSemaphore();
         var inFlightFence = currentFrameState.inFlightFence();
 
         commandBuffer.endRenderPass();
@@ -327,6 +342,9 @@ public final class VkRenderer implements Renderer {
 
         currentFrameState = null;
         currentImageIndex = -1;
+
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+        currentSemaphore = (currentSemaphore + 1) % swapChainState.size();
     }
 
     @Override

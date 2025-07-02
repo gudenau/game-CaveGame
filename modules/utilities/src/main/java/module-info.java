@@ -18,6 +18,4 @@ module net.gudenau.cavegame.utilities {
     requires org.lwjgl;
 
     requires com.google.gson;
-
-    requires net.jodah.typetools;
 }

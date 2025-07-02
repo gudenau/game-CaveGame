@@ -47,6 +47,11 @@ public final class VulkanFramebuffer implements AutoCloseable {
         return handle;
     }
 
+    @NotNull
+    public VulkanLogicalDevice device() {
+        return device;
+    }
+
     @Override
     public void close() {
         vkDestroyFramebuffer(device.handle(), handle, VulkanAllocator.get());

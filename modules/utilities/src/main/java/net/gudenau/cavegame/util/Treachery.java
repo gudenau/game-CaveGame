@@ -17,10 +17,7 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 
 /**
  * A bunch of hacks, beware the dragons. (This is undocumented on purpose)
@@ -225,5 +222,14 @@ public final class Treachery {
         var replacement = new StackTraceElement[trace.length - strip];
         System.arraycopy(trace, strip, replacement, 0, replacement.length);
         Throwable$stackTrace.set(exception, replacement);
+    }
+
+    public static void trySet(@NotNull Object instance, String name, boolean value) {
+        try {
+            var setter = findVirtualSetterUnchecked(instance.getClass(), name, boolean.class);
+            setter.invoke(instance, value);
+        } catch(Throwable e) {
+            new RuntimeException("Failed to set " + MiscUtils.longClassName(instance.getClass()) + "." + name, e).printStackTrace();
+        }
     }
 }

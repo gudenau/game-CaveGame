@@ -45,9 +45,11 @@ public final class GlfwUtils {
 
         var glfwThread = Thread.currentThread();
         glfwThread.setName("GLFW Worker");
+        /*
         if(glfwThread.threadId() != 1) {
             throw new IllegalStateException("GLFW can't be handed over outside of the original main thread!");
         }
+         */
 
         if(Platform.get() == Platform.LINUX && !Config.FORCE_X.get()) {
             if(glfwPlatformSupported(GLFW_PLATFORM_WAYLAND)) {

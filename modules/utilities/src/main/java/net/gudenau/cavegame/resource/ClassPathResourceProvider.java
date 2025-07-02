@@ -62,7 +62,7 @@ public sealed abstract class ClassPathResourceProvider implements ResourceProvid
         private Archive(@NotNull Path path) throws IOException {
             fileSystem = FileSystems.newFileSystem(path, Map.of());
             // Try to make it read-only, fails safe.
-            Treachery.tryInvoke(fileSystem, "setReadOnly", MethodType.methodType(void.class));
+            Treachery.trySet(fileSystem, "readOnly", true);
         }
 
         @Override
