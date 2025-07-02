@@ -1,5 +1,6 @@
-package net.gudenau.cavegame.gui;
+package net.gudenau.cavegame.gui.test;
 
+import net.gudenau.cavegame.gui.Direction;
 import net.gudenau.cavegame.gui.component.*;
 import net.gudenau.cavegame.gui.drawing.*;
 import net.gudenau.cavegame.gui.input.MouseButton;
@@ -34,7 +35,7 @@ public final class GuiTest {
         SwingUtilities.invokeAndWait(() -> {
             var frame = new JFrame("GUI Test");
 
-            ResourceLoader.registerProvider("gui", ClassPathResourceProvider.of(GuiTest.class));
+            ResourceLoader.registerProvider("gui", ClassPathResourceProvider.of(Direction.class));
 
             var graphics = new AwtGraphics(640, 480);
             graphics.drawRectangle(0, 0, Integer.MAX_VALUE, Integer.MAX_VALUE, 0xFFFF00FF);
@@ -108,15 +109,15 @@ public final class GuiTest {
     }
 
     private static final class AwtGraphics implements DrawContext, Font {
-        private AwtCanvas root;
-        private AwtCanvas canvas;
+        private AwtGraphics.AwtCanvas root;
+        private AwtGraphics.AwtCanvas canvas;
 
         private AwtGraphics(int width, int height) {
             resize(width, height);
         }
 
         public void resize(int width, int height) {
-            root = canvas = new AwtCanvas(0, 0, null, width, height);
+            root = canvas = new AwtGraphics.AwtCanvas(0, 0, null, width, height);
         }
 
         @Override
@@ -131,7 +132,7 @@ public final class GuiTest {
 
         @Override
         public @NotNull StackEntry scissor(int x, int y, int width, int height) {
-            canvas = new AwtCanvas(x, y, canvas, width, height);
+            canvas = new AwtGraphics.AwtCanvas(x, y, canvas, width, height);
             return canvas;
         }
 
@@ -219,12 +220,12 @@ public final class GuiTest {
             private final int x;
             private final int y;
             @Nullable
-            private final AwtCanvas parent;
+            private final AwtGraphics.AwtCanvas parent;
 
             private final BufferedImage canvas;
             private final Graphics2D graphics;
 
-            private AwtCanvas(int x, int y, @Nullable AwtCanvas parent, int width, int height) {
+            private AwtCanvas(int x, int y, @Nullable AwtGraphics.AwtCanvas parent, int width, int height) {
                 this.x = x;
                 this.y = y;
                 this.parent = parent;

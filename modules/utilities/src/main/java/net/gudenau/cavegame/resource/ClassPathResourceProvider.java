@@ -44,7 +44,7 @@ public sealed abstract class ClassPathResourceProvider implements ResourceProvid
             try {
                 return new DirectoryTree(path);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to discover dir tree " + path + " for " + MiscUtils.longClassName(type));
+                throw new RuntimeException("Failed to discover dir tree " + path + " for " + MiscUtils.longClassName(type), e);
             }
         }
     }

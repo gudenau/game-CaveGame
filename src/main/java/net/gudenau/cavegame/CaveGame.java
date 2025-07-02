@@ -21,6 +21,10 @@ import java.io.IOException;
 import java.util.Map;
 
 public final class CaveGame {
+    static {
+        System.setProperty("java.awt.headless", "true");
+    }
+
     public static final String NAMESPACE = Identifier.CAVEGAME_NAMESPACE;
 
     private static final Logger LOGGER = Logger.forName("CaveGame");

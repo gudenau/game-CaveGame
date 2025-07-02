@@ -3,6 +3,10 @@ module net.gudenau.cavegame.gui {
 
     requires net.gudenau.cavegame.utilities;
 
-    //TODO Remove this
-    requires java.desktop;
+    exports net.gudenau.cavegame.gui;
+    exports net.gudenau.cavegame.gui.component;
+    exports net.gudenau.cavegame.gui.drawing;
+    exports net.gudenau.cavegame.gui.input;
+    exports net.gudenau.cavegame.gui.layout;
+    exports net.gudenau.cavegame.gui.value;
 }
