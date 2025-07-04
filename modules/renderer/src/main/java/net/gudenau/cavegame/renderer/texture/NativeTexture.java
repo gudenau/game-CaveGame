@@ -56,9 +56,8 @@ public final class NativeTexture implements Texture {
         this.cleaner = cleaner;
     }
 
-    //TODO Replace this with something that isn't AWT (Apple breaks it)/STB (maintainer hates security)
     public void save(@NotNull Path destination) throws IOException {
-        throw new UnsupportedOperationException("Implement image saving with SPNG");
+        PngWriter.write(destination, pixels(), width, height, format);
     }
 
     public void blit(int x, int y, @NotNull NativeTexture texture) {
