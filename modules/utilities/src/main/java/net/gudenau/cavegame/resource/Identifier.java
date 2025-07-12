@@ -76,11 +76,13 @@ public record Identifier(
      * @param identifier The identifier to parse
      */
     public Identifier(@NotNull String identifier) {
-        //TODO Fix this when JEP 447 happens
-        this(
-            Objects.requireNonNull(identifier, "identifier can't be null").split(":", 2)[0],
-            identifier.split(":", 2)[1]
-        );
+        Objects.requireNonNull(identifier, "identifier can't be null");
+        var split = identifier.split(":", 2);
+        if(split.length != 2) {
+            throw new IllegalArgumentException("identifier didn't have a colon in it");
+        }
+
+        this(split[0], split[1]);
     }
 
     /**
