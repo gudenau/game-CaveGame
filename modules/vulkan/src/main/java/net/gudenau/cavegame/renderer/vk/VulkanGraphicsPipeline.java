@@ -18,6 +18,7 @@ import static org.lwjgl.vulkan.VK10.*;
 public final class VulkanGraphicsPipeline implements AutoCloseable {
     @NotNull
     private final VulkanLogicalDevice device;
+    private final VulkanDescriptorPool descriptorPool;
     private final long pipelineLayout;
     private final long handle;
     private final long descriptorSetLayout;
@@ -32,13 +33,19 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
         @NotNull Collection<VulkanShaderModule> modules,
         @NotNull VkVertexFormat format,
         @NotNull VkUniformLayout uniforms,
-        @NotNull VulkanDescriptorPool descriptorPool,
+        int swapChainSize,
         @NotNull List<GraphicsBuffer> buffers,
         @NotNull Int2ObjectMap<VulkanTexture> textures
     ) {
         this.device = device;
 
         try (var stack = MemoryStack.stackPush()) {
+            descriptorPool = new VulkanDescriptorPool(
+                device,
+                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, swapChainSize),
+                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, swapChainSize)
+            );
+
             var dynamicState = VkPipelineDynamicStateCreateInfo.calloc(stack);
             dynamicState.sType$Default();
             dynamicState.pDynamicStates(stack.ints(
@@ -299,6 +306,7 @@ public final class VulkanGraphicsPipeline implements AutoCloseable {
         vkDestroyPipeline(device.handle(), handle, VulkanAllocator.get());
         vkDestroyDescriptorSetLayout(device.handle(), descriptorSetLayout, VulkanAllocator.get());
         vkDestroyPipelineLayout(device.handle(), pipelineLayout, VulkanAllocator.get());
+        descriptorPool.close();
     }
 
     public long descriptorSet(int index) {

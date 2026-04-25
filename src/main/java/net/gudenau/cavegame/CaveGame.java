@@ -1,17 +1,24 @@
 package net.gudenau.cavegame;
 
 import net.gudenau.cavegame.config.Config;
+import net.gudenau.cavegame.gui.Direction;
+import net.gudenau.cavegame.gui.layout.LinearLayoutEngine;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.GlfwUtils;
 import net.gudenau.cavegame.renderer.RendererInfo;
 import net.gudenau.cavegame.renderer.font.HarfBuzzFont;
+import net.gudenau.cavegame.renderer.screen.ContainerScreen;
 import net.gudenau.cavegame.resource.ClassPathResourceProvider;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
+import net.gudenau.cavegame.resource.ResourceProvider;
 import net.gudenau.cavegame.screen.VikingScreen;
 import net.gudenau.cavegame.util.Closer;
 import net.gudenau.cavegame.util.MiscUtils;
 import org.lwjgl.system.Configuration;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public final class CaveGame {
     static {
@@ -45,6 +52,7 @@ public final class CaveGame {
     }
 
     private static void newMain() {
+        ResourceLoader.discoverProviders();
         ResourceLoader.registerProvider(NAMESPACE, ClassPathResourceProvider.of(CaveGame.class));
 
         LOGGER.info("Available renderers: ");
@@ -74,6 +82,7 @@ public final class CaveGame {
             window.bind();
 
             window.pushScreen(new VikingScreen(renderer));
+            window.pushScreen(new ContainerScreen(LinearLayoutEngine.builder(Direction.Axis.Y).build()));
 
             window.visible(true);
 

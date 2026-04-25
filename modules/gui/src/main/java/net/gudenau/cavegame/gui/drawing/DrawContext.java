@@ -5,7 +5,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 /// The primary interface for GUIs to draw to the screen.
-public interface DrawContext {
+public interface DrawContext extends AutoCloseable {
     /// An entry into the scissor stack.
     interface StackEntry extends AutoCloseable {
         @Override void close();
@@ -84,4 +84,6 @@ public interface DrawContext {
     default void drawImage(@NotNull Identifier identifier, int x, int y, int width, int height, int u, int v, int textureWidth, int textureHeight) {
         drawImage(identifier, x, y, width, height, u, v, width, height, textureWidth, textureHeight);
     }
+
+    @Override default void close() {}
 }

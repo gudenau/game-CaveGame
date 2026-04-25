@@ -1,3 +1,6 @@
+import net.gudenau.cavegame.gui.impl.GuiResourceProviders;
+import net.gudenau.cavegame.resource.ResourceProviderProvider;
+
 module net.gudenau.cavegame.gui {
     requires static org.jetbrains.annotations;
 
@@ -9,4 +12,6 @@ module net.gudenau.cavegame.gui {
     exports net.gudenau.cavegame.gui.input;
     exports net.gudenau.cavegame.gui.layout;
     exports net.gudenau.cavegame.gui.value;
+
+    provides ResourceProviderProvider with GuiResourceProviders;
 }

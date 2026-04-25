@@ -1,0 +1,11 @@
+[
+  {
+    "id": "gui:button",
+    "texture": "gui:button",
+    "data": {
+      "type": "nine_square",
+      "size": 9,
+      "border": 4
+    }
+  }
+]

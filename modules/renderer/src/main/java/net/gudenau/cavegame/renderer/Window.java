@@ -1,11 +1,11 @@
 package net.gudenau.cavegame.renderer;
 
 import net.gudenau.cavegame.renderer.screen.Screen;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
-import java.util.function.IntConsumer;
 
 public interface Window extends AutoCloseable {
     void visible(boolean visible);
@@ -24,7 +24,9 @@ public interface Window extends AutoCloseable {
 
     @NotNull Size size();
 
-    void resizeCallback(@Nullable ResizeCallback callback);
+    @Contract("_ -> this")
+    @NotNull ResizeCallback addResizeCallback(@NotNull ResizeCallback callback);
+    void removeResizeCallback(@NotNull ResizeCallback callback);
 
     void pushScreen(@NotNull Screen screen);
 

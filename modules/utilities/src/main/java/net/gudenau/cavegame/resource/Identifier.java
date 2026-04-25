@@ -1,12 +1,11 @@
 package net.gudenau.cavegame.resource;
 
-import net.gudenau.cavegame.codec.Codec;
-import net.gudenau.cavegame.codec.CodecResult;
-import net.gudenau.cavegame.codec.ops.Operations;
+import net.gudenau.codec.Codec;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -23,29 +22,7 @@ public record Identifier(
     @NotNull String namespace,
     @NotNull String path
 ) {
-    public static final Codec<Identifier> CODEC = new Codec.Impartial<>() {
-        @Override
-        public <R> CodecResult<R> encode(Operations<R> operations, Identifier input) {
-            return CodecResult.success(operations.fromString(input.toString()));
-        }
-
-        @Override
-        public <R> CodecResult<Identifier> decode(Operations<R> operations, R input) {
-            return operations.toString(input).flatMap((string) -> {
-                try {
-                    return CodecResult.success(new Identifier(string));
-                } catch (Throwable e) {
-                    return CodecResult.error(() -> '"' + string + "\" is not a valid identifier");
-                }
-            });
-        }
-
-        @Override
-        @NotNull
-        public Class<Identifier> type() {
-            return Identifier.class;
-        }
-    };
+    public static final Codec<Identifier> CODEC = Codec.STRING.map(Identifier::new, Identifier::toString);
 
     /**
      * The namespace predicate used to validate identifiers.
@@ -85,6 +62,11 @@ public record Identifier(
         this(split[0], split[1]);
     }
 
+    @NotNull
+    public static Identifier cavegame(String path) {
+        return new Identifier(CAVEGAME_NAMESPACE, path);
+    }
+
     /**
      * Adds the provided string to the beginning of this path, followed by a forward slash.
      *
@@ -106,6 +88,11 @@ public record Identifier(
     @NotNull
     public Identifier append(@NotNull String suffix) {
         return new Identifier(namespace, path + suffix);
+    }
+
+    @NotNull
+    public Identifier appendPath(@NotNull String suffix) {
+        return new Identifier(namespace, path + '/' + suffix);
     }
 
     @Override
@@ -174,16 +161,16 @@ public record Identifier(
      * {@link #filename() filename} past the last '.', if present. If there is no extension (I.E. "cave_game:file") this
      * will return 'null', if the extension is empty (I.E. "cave_game:file.") this method will return an empty string.
      *
-     * @return The extension if present, null if absent
+     * @return The extension if present, empty if absent
      */
-    @Nullable
-    public String extension() {
+    @NotNull
+    public Optional<String> extension() {
         var fileName = filename();
         int index = fileName.lastIndexOf('.');
         if(index == -1) {
-            return null;
+            return Optional.empty();
         } else {
-            return fileName.substring(index + 1);
+            return Optional.of(fileName.substring(index + 1));
         }
     }
 
@@ -199,11 +186,16 @@ public record Identifier(
     public Identifier extension(@NotNull String extension) {
         Objects.requireNonNull(extension, "extension can't be null");
 
-        if(extension() != null) {
+        if(extension().isPresent()) {
             throw new IllegalStateException("Identifier " + this + " already has an extension");
         }
 
         return append("." + extension);
+    }
+
+    public boolean hasExtension(@NotNull String extension) {
+        return extension().map((ext) -> ext.equals(extension))
+            .orElse(false);
     }
 
     @NotNull

@@ -1,5 +1,6 @@
 package net.gudenau.cavegame.renderer;
 
+import net.gudenau.cavegame.gui.drawing.DrawContext;
 import net.gudenau.cavegame.renderer.screen.Screen;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.renderer.texture.Texture;
@@ -36,4 +37,6 @@ public interface Renderer extends AutoCloseable {
     }
 
     void drawScreen(@NotNull Screen screen);
+
+    @NotNull DrawContext drawContext();
 }

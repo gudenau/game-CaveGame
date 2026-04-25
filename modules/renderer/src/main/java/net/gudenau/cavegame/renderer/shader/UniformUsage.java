@@ -1,11 +1,10 @@
 package net.gudenau.cavegame.renderer.shader;
 
-import net.gudenau.cavegame.codec.Codec;
-import net.gudenau.cavegame.codec.CodecBuilder;
+import net.gudenau.codec.Codec;
 
 public enum UniformUsage {
     UBO,
     ;
 
-    public static final Codec<UniformUsage> CODEC = CodecBuilder.ofEnum(UniformUsage.class);
+    public static final Codec<UniformUsage> CODEC = Codec.enumeration(UniformUsage.class);
 }

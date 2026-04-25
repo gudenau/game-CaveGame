@@ -4,5 +4,7 @@ dependencies {
     implementation 'org.lwjgl:lwjgl'
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
 
-    implementation "com.google.code.gson:gson:${project.gsonVersion}"
+    implementation "net.gudenau.json:json:${project.jsonVersion}"
+    implementation "net.gudenau.codec:codec:${project.codecVersion}"
+    implementation "net.gudenau.codec:codec-json:${project.codecVersion}"
 }

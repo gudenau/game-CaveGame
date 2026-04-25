@@ -1,7 +1,6 @@
 package net.gudenau.cavegame.renderer.shader;
 
-import net.gudenau.cavegame.codec.Codec;
-import net.gudenau.cavegame.codec.CodecBuilder;
+import net.gudenau.codec.Codec;
 import org.jetbrains.annotations.NotNull;
 
 public enum ShaderType {
@@ -9,7 +8,7 @@ public enum ShaderType {
     VERTEX("vert"),
     ;
 
-    public static final Codec<ShaderType> CODEC = CodecBuilder.ofEnum(ShaderType.class);
+    public static final Codec<ShaderType> CODEC = Codec.enumeration(ShaderType.class);
 
     @NotNull
     private final String extension;

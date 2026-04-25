@@ -202,12 +202,13 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
     }
 
     private boolean validateExtensions() {
+        VkExtensionProperties.Buffer extensions = null;
         try(var stack = MemoryStack.stackPush()) {
             var countPointer = stack.ints(0);
             vkEnumerateDeviceExtensionProperties(device, (ByteBuffer) null, countPointer, null);
 
             var count = countPointer.get(0);
-            var extensions = VkExtensionProperties.calloc(count, stack);
+            extensions = VkExtensionProperties.calloc(count);
             vkEnumerateDeviceExtensionProperties(device, (ByteBuffer) null, countPointer, extensions);
 
             var missingExtensions = new HashSet<>(VulkanUtils.DEVICE_EXTENSIONS);
@@ -216,6 +217,10 @@ public final class VulkanPhysicalDevice implements AutoCloseable {
             }
 
             return missingExtensions.isEmpty();
+        } finally {
+            if (extensions != null) {
+                extensions.free();
+            }
         }
     }
 

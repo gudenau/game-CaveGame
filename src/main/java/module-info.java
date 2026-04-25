@@ -15,8 +15,6 @@ module net.gudenau.cavegame {
     
     requires it.unimi.dsi.fastutil;
 
-    requires com.google.gson;
-
     requires net.jodah.typetools;
 
     requires org.lwjgl;
@@ -25,4 +23,6 @@ module net.gudenau.cavegame {
     requires transitive net.gudenau.cavegame.utilities;
     requires net.gudenau.cavegame.wooting;
     requires net.gudenau.cavegame.renderer;
+
+    requires net.gudenau.codec;
 }

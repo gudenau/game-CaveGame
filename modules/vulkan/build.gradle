@@ -19,5 +19,10 @@ dependencies {
     implementation "org.lwjgl:lwjgl-spvc"
     runtimeOnly "org.lwjgl:lwjgl-spvc::$lwjglNatives"
 
+    implementation "net.gudenau.json:json:${project.jsonVersion}"
+    implementation "net.gudenau.codec:codec:${project.codecVersion}"
+    implementation "net.gudenau.codec:codec-json:${project.codecVersion}"
+
+    implementation project(':gui')
     implementation project(':renderer')
 }

@@ -2,17 +2,21 @@ package net.gudenau.cavegame.renderer.vk;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntList;
+import net.gudenau.cavegame.gui.drawing.DrawContext;
 import net.gudenau.cavegame.logger.Logger;
 import net.gudenau.cavegame.renderer.*;
 import net.gudenau.cavegame.renderer.screen.Screen;
 import net.gudenau.cavegame.renderer.shader.Shader;
 import net.gudenau.cavegame.renderer.shader.ShaderMeta;
+import net.gudenau.cavegame.renderer.texture.AtlasedTexture;
 import net.gudenau.cavegame.renderer.texture.Texture;
 import net.gudenau.cavegame.renderer.texture.TextureManager;
+import net.gudenau.cavegame.renderer.vk.gui.VkDrawContext;
 import net.gudenau.cavegame.renderer.vk.texture.VulkanTexture;
 import net.gudenau.cavegame.renderer.vk.texture.VulkanTextureManager;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.util.collection.FastCollectors;
+import net.gudenau.codec.util.Result;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -20,6 +24,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkFormatProperties;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -66,8 +71,10 @@ public final class VkRenderer implements Renderer {
     @Nullable
     private FrameState currentFrameState;
     private int currentImageIndex;
-    private final VulkanDescriptorPool descriptorPool;
     private final VulkanTextureManager textureManager;
+
+    private AtlasedTexture<Identifier> guiAtlas;
+    private Shader guiShader;
 
     public VulkanPhysicalDevice physicalDevice() {
         return physicalDevice;
@@ -125,7 +132,7 @@ public final class VkRenderer implements Renderer {
         this.window = window;
 
         try(var stack = MemoryStack.stackPush()) {
-            window.resizeCallback((_, _, _) -> framebufferResized = true);
+            window.addResizeCallback((_, _, _) -> framebufferResized = true);
 
             instance = new VulkanInstance();
             debugMessenger = VulkanUtils.ENABLE_DEBUG ? new VulkanDebugMessenger(instance) : null;
@@ -150,17 +157,22 @@ public final class VkRenderer implements Renderer {
                 .map(SwapChainState::new)
                 .toList();
 
-            descriptorPool = new VulkanDescriptorPool(
-                logicalDevice,
-                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, swapChainState.size()),
-                new VulkanDescriptorPool.Info(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, swapChainState.size())
-            );
-
             frameState = IntStream.range(0, swapChainState.size())
                 .mapToObj((index) -> createFrameState(index, logicalDevice, commandPool))
                 .toList();
 
             textureManager = new VulkanTextureManager(this);
+
+            try {
+                guiAtlas = textureManager.loadAtlas(new Identifier("gui", "gui"));
+            } catch(IOException e) {
+                //FIXME
+                throw new RuntimeException(e);
+            }
+            guiShader = loadShader(
+                Identifier.cavegame("gui"),
+                Map.of("texSampler", guiAtlas)
+            );
         }
     }
 
@@ -212,12 +224,14 @@ public final class VkRenderer implements Renderer {
     public void close() {
         logicalDevice.waitForIdle();
 
+        guiShader.close();
+        guiAtlas.close();
+
         textureManager.close();
 
         destroySwapChain();
 
         frameState.forEach(FrameState::close);
-        descriptorPool.close();
         renderPass.close();
         commandPool.close();
         logicalDevice.close();
@@ -252,6 +266,7 @@ public final class VkRenderer implements Renderer {
 
         commandBuffer.reset();
         commandBuffer.begin();
+        commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapChainState.get(currentImageIndex).framebuffer());
     }
 
     private long startTime = System.nanoTime();
@@ -300,7 +315,6 @@ public final class VkRenderer implements Renderer {
     @Override
     public void drawBuffer(int vertexCount, @NotNull GraphicsBuffer vertexBuffer, @Nullable GraphicsBuffer indexBuffer) {
         var commandBuffer = currentFrameState.commandBuffer;
-        commandBuffer.beginRenderPass(swapchain.extent(), renderPass, swapChainState.get(currentImageIndex).framebuffer());
         var vulkanShader = (VkShader) vertexBuffer.shader();
         commandBuffer.bindPipeline(vulkanShader.pipeline());
         commandBuffer.setViewport(swapchain.extent().width(), swapchain.extent().height());
@@ -355,13 +369,10 @@ public final class VkRenderer implements Renderer {
     @Override
     public Shader loadShader(@NotNull Identifier identifier, @NotNull Map<String, Texture> textures) {
         ShaderMeta metadata;
-        {
-            var result = ShaderMeta.load(identifier);
-            var partial = result.partial();
-            if (partial.isPresent()) {
-                throw new RuntimeException("Failed to load shader metadata for " + identifier + '\n' + partial.get().error());
-            }
-            metadata = result.getResult();
+        switch(ShaderMeta.load(identifier)) {
+            case Result.Value(var result) -> metadata = result;
+            case Result.Error(var error, var _) ->
+                throw new RuntimeException("Failed to load shader metadata for " + identifier + '\n' + error.get());
         }
 
         var modules = new HashMap<VulkanShaderModule.Type, VulkanShaderModule>();
@@ -421,7 +432,7 @@ public final class VkRenderer implements Renderer {
                 modules.values(),
                 vertexFormat,
                 uniforms,
-                descriptorPool,
+                swapChainState.size(),
                 frameState.stream()
                     .map(FrameState::uniformBuffer)
                     .toList(),
@@ -454,6 +465,12 @@ public final class VkRenderer implements Renderer {
         } finally {
             draw();
         }
+    }
+
+    @Override
+    @NotNull
+    public DrawContext drawContext() {
+        return new VkDrawContext(this, guiShader);
     }
 
     @NotNull

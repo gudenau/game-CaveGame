@@ -1,0 +1,34 @@
+{
+  "attributes": {
+    "inPosition": {
+      "usage": "position"
+    },
+    "inColor": {
+      "usage": "color"
+    },
+    "inTextureCoord": {
+      "usage": "texture_coord"
+    }
+  },
+  "uniforms": {
+    "ubo": {
+      "shader": "vertex",
+      "usage": "ubo"
+    }
+  },
+  "textures": {
+    "texSampler": {}
+  },
+  "shaders": {
+    "vertex": {
+      "files": {
+        "vulkan": "cave_game:gui/vulkan"
+      }
+    },
+    "fragment": {
+      "files": {
+        "vulkan": "cave_game:gui/vulkan"
+      }
+    }
+  }
+}

@@ -2,6 +2,11 @@ package net.gudenau.cavegame.resource;
 
 import net.gudenau.cavegame.config.Config;
 import net.gudenau.cavegame.util.SharedLock;
+import net.gudenau.codec.Codec;
+import net.gudenau.codec.ops.json.JsonOps;
+import net.gudenau.codec.util.Result;
+import net.gudenau.json.Json;
+import net.gudenau.json.JsonParser;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.MemoryUtil;
 
@@ -16,6 +21,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.stream.Collector;
+import java.util.stream.Stream;
 
 /**
  * The core of resource loading, manages access to namespaces and will manage access to resource packs when implemented.
@@ -33,9 +40,58 @@ public final class ResourceLoader {
 
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(ResourceLoader::close, "ResourceLoader cleanup"));
+        doDiscoverProviders();
     }
 
     private ResourceLoader() {}
+
+    /// Ensures that the service loader based resource providers have been registered.
+    public static void discoverProviders() {}
+
+    /// Discovers {@link ResourceProvider}s from the module path.
+    private static void doDiscoverProviders() {
+        var providers = ServiceLoader.load(ResourceProviderProvider.class).stream()
+            .map(ServiceLoader.Provider::get)
+            .map(ResourceProviderProvider::providers)
+            .collect(Collector.of(
+                () -> new HashMap<String, Set<ResourceProvider>>(),
+                (map, value) -> {
+                    value.forEach((namespace, provider) ->
+                        map.computeIfAbsent(namespace, (_) -> new HashSet<>())
+                            .add(provider)
+                    );
+                },
+                (a, b) -> {
+                    var q = new HashMap<String, Set<ResourceProvider>>(a.size() + b.size());
+                    q.putAll(a);
+                    b.forEach((namespace, provider) ->
+                        q.computeIfAbsent(namespace, (_) -> new HashSet<>())
+                            .addAll(provider)
+                    );
+                    return q;
+                },
+                Collections::unmodifiableMap
+            ));
+
+        var illegalProviders = new HashSet<String>();
+        providers.forEach((namespace, provider) -> {
+            // Shouldn't happen, but...
+            if (provider.isEmpty()) {
+                return;
+            }
+
+            if (provider.size() > 1) {
+                illegalProviders.add(namespace);
+                return;
+            }
+
+            registerProvider(namespace, provider.stream().findFirst().get());
+        });
+
+        if (!illegalProviders.isEmpty()) {
+            throw new RuntimeException("Found duplicate namespaces: " + String.join(", ", illegalProviders));
+        }
+    }
 
     /**
      * Registers a {@link ResourceProvider} to a new namespace.<br>
@@ -56,6 +112,20 @@ public final class ResourceLoader {
         });
     }
 
+    public static Stream<Identifier> walk(@NotNull Identifier identifier, int depth) {
+        @SuppressWarnings("resource")
+        var provider = lock.read(() -> providers.get(identifier.namespace()));
+
+        return provider == null ? Stream.empty() : provider.walk(identifier, depth);
+    }
+
+    public static Stream<Identifier> walk(@NotNull Identifier identifier) {
+        return walk(identifier, ResourceProvider.UNLIMITED_DEPTH);
+    }
+
+    public static Stream<Identifier> list(@NotNull Identifier identifier) {
+        return walk(identifier, 0);
+    }
 
     /**
      * Resolves a {@link Path} in the registered {@link ResourceProvider}s.
@@ -164,5 +234,24 @@ public final class ResourceLoader {
             }
             return buffer.flip();
         }
+    }
+
+    @NotNull
+    public static Json json(@NotNull Identifier identifier) throws IOException {
+        try(var reader = reader(identifier)) {
+            return JsonParser.parse(reader);
+        }
+    }
+
+    @NotNull
+    public static <T> Result<T> decodeJson(@NotNull Codec<T> codec, @NotNull Identifier identifier) {
+        Json json;
+        try {
+            json = json(identifier);
+        } catch (IOException e) {
+            return Result.error(() -> "Failed to read json " + identifier + ": " + e.getMessage());
+        }
+
+        return codec.decode(JsonOps.instance(false), json);
     }
 }

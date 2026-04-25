@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-public sealed class VulkanAtlasedTexture<K> extends VulkanTexture implements AtlasedTexture<K> permits VulkanFont {
+public sealed class VulkanAtlasedTexture<K> extends VulkanTexture implements AtlasedTexture<K> permits VulkanFont, VulkanSpriteAtlas {
     public VulkanAtlasedTexture(@NotNull VkRenderer renderer, @NotNull VulkanTextureManager textureManager, @NotNull VkGraphicsBuffer stagingBuffer, @NotNull NativeTexture imageResult) {
         super(renderer, textureManager, stagingBuffer, imageResult, Flag.DISABLE_MIPMAP);
     }

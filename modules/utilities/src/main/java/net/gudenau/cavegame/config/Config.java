@@ -1,8 +1,6 @@
 package net.gudenau.cavegame.config;
 
-import net.gudenau.cavegame.codec.CodecBuilder;
 import net.gudenau.cavegame.logger.LogLevel;
-import net.gudenau.cavegame.util.collection.FastCollectors;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.system.Platform;
@@ -10,7 +8,6 @@ import org.lwjgl.system.Platform;
 import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 /**
  * A simple configuration system.
@@ -46,8 +43,17 @@ public final class Config<T> {
 
     /**
      * A flag to force the use of X on Linux systems that have Wayland installed.
+     *
+     * RenderDoc doesn't support Wayland for some reason, so look for the Vulkan env var and default to true if it's
+     * set.
      */
-    public static final Config<Boolean> FORCE_X = bool("force_x", false, () -> Platform.get() == Platform.LINUX);
+    public static final Config<Boolean> FORCE_X = bool(
+        "force_x",
+        System.getenv()
+            .getOrDefault("ENABLE_VULKAN_RENDERDOC_CAPTURE", "0")
+            .equals("1"),
+        () -> Platform.get() == Platform.LINUX
+    );
 
     /**
      * Sets the minimum level for GL messages.

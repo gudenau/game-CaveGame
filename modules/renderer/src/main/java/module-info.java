@@ -22,6 +22,9 @@ module net.gudenau.cavegame.renderer {
     requires org.lwjgl.harfbuzz;
     requires org.lwjgl.spng;
 
+    requires net.gudenau.codec;
+
+    requires transitive net.gudenau.cavegame.gui;
     requires net.gudenau.cavegame.logger;
     requires net.gudenau.cavegame.utilities;
 }

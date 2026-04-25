@@ -12,6 +12,8 @@ module net.gudenau.cavegame.renderer.vulkan {
 
     requires it.unimi.dsi.fastutil;
 
+    requires net.gudenau.codec.json;
+
     requires org.joml;
 
     requires org.lwjgl;
@@ -19,4 +21,5 @@ module net.gudenau.cavegame.renderer.vulkan {
     requires org.lwjgl.vulkan;
     requires org.lwjgl.shaderc;
     requires org.lwjgl.spvc;
+    requires net.gudenau.codec;
 }

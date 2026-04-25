@@ -51,10 +51,16 @@ public final class GlfwUtils {
         }
          */
 
-        if(Platform.get() == Platform.LINUX && !Config.FORCE_X.get()) {
-            if(glfwPlatformSupported(GLFW_PLATFORM_WAYLAND)) {
-                glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
-            }
+        if (Platform.get() == Platform.LINUX) {
+            boolean wayland = glfwPlatformSupported(GLFW_PLATFORM_WAYLAND) &&
+                !Config.FORCE_X.get();
+
+            glfwInitHint(
+                GLFW_PLATFORM,
+                wayland ?
+                    GLFW_PLATFORM_WAYLAND :
+                    GLFW_PLATFORM_X11
+            );
         }
 
         if(!glfwInit()) {

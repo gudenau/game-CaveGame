@@ -11,13 +11,16 @@ import net.gudenau.cavegame.renderer.vk.VkRenderer;
 import net.gudenau.cavegame.resource.Identifier;
 import net.gudenau.cavegame.resource.ResourceLoader;
 import net.gudenau.cavegame.util.SharedLock;
+import net.gudenau.codec.ops.json.JsonOps;
+import net.gudenau.codec.util.Result;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
-import java.nio.file.Path;
+import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.StructuredTaskScope;
 import java.util.stream.Collectors;
 
 public final class VulkanTextureManager implements TextureManager, AutoCloseable {
@@ -31,6 +34,24 @@ public final class VulkanTextureManager implements TextureManager, AutoCloseable
 
     public VulkanTextureManager(VkRenderer renderer) {
         this.renderer = renderer;
+
+        try(var texture = NativeTexture.create(MISSING_TEXTURE_SIZE, MISSING_TEXTURE_SIZE, TextureFormat.RGBA)) {
+            var pixels = texture.pixels().asIntBuffer();
+
+            final int half = MISSING_TEXTURE_SIZE / 2;
+
+            for(int y = 0; y < MISSING_TEXTURE_SIZE; y++) {
+                boolean halfY = y >= half;
+
+                for(int x = 0; x < MISSING_TEXTURE_SIZE; x++) {
+                    boolean halfX = x >= half;
+                    int color = (halfY ^ halfX) ? MISSING_TEXTURE_BLACK : MISSING_TEXTURE_MAGENTA;
+                    pixels.put(color);
+                }
+            }
+
+            createTexture(MISSING_TEXTURE, texture);
+        }
     }
 
     public void close() {
@@ -49,6 +70,39 @@ public final class VulkanTextureManager implements TextureManager, AutoCloseable
         samplers.values().forEach(VulkanSampler::close);
     }
 
+    private VulkanTexture doUpload(@NotNull NativeTexture texture) {
+        var pixels = texture.pixels();
+
+        try(var stagingBuffer = renderer.createBuffer(BufferType.STAGING, pixels.remaining())) {
+            stagingBuffer.upload(pixels);
+            return new VulkanTexture(renderer, this, stagingBuffer, texture);
+        }
+    }
+
+    @Override
+    @NotNull
+    public Texture createTexture(@NotNull Identifier identifier, @NotNull NativeTexture texture) {
+        var uploaded = doUpload(texture);
+        if(textureLock.write(() -> textures.putIfAbsent(identifier, uploaded)) != null) {
+            uploaded.close();
+            throw new IllegalStateException("Texture " + identifier + " already exits");
+        }
+
+        return uploaded;
+    }
+
+    @NotNull
+    private static NativeTexture readNativeTexture(@NotNull Identifier identifier, @NotNull TextureFormat format) throws IOException {
+        NativeTexture imageResult;
+        var imageFileBuffer = ResourceLoader.buffer(identifier.normalize("texture", ".png"));
+        try {
+            imageResult = PngReader.read(imageFileBuffer, format);
+        } finally {
+            MemoryUtil.memFree(imageFileBuffer);
+        }
+        return imageResult;
+    }
+
     //TODO Validate format argument on already loaded textures
     @NotNull
     @Override
@@ -58,27 +112,13 @@ public final class VulkanTextureManager implements TextureManager, AutoCloseable
             return texture;
         }
 
-        NativeTexture imageResult;
-        var imageFileBuffer = ResourceLoader.buffer(identifier.normalize("texture", ".png"));
-        try {
-            imageResult = PngReader.read(imageFileBuffer, format);
-        } finally {
-            MemoryUtil.memFree(imageFileBuffer);
-        }
-        var pixels = imageResult.pixels();
-        VkGraphicsBuffer stagingBuffer;
-        try {
-            stagingBuffer = renderer.createBuffer(BufferType.STAGING, pixels.remaining());
-            stagingBuffer.upload(pixels);
-        } finally {
-            imageResult.close();
-        }
+        NativeTexture imageResult = readNativeTexture(identifier, format);
 
         VulkanTexture loadedTexture;
         try {
-            loadedTexture = new VulkanTexture(renderer, this, stagingBuffer, imageResult);
+            loadedTexture = doUpload(imageResult);
         } finally {
-            stagingBuffer.close();
+            imageResult.close();
         }
 
         var existing = textureLock.write(() -> textures.putIfAbsent(identifier, loadedTexture));
@@ -88,6 +128,56 @@ public final class VulkanTextureManager implements TextureManager, AutoCloseable
         } else {
             return loadedTexture;
         }
+    }
+
+    @Override
+    @NotNull
+    public SpriteAtlas loadAtlas(@NotNull Identifier identifier, @NotNull TextureFormat textureFormat) throws IOException {
+        {
+            var texture = textureLock.read(() -> textures.get(identifier));
+            if (texture instanceof SpriteAtlas atlas) {
+                return atlas;
+            }
+            if (texture != null) {
+                throw new IllegalStateException("Texture " + identifier + " is not an atlas");
+            }
+        }
+
+        List<AtlasMetadata> metadata;
+        switch (ResourceLoader.decodeJson(AtlasMetadata.CODEC_LIST, identifier.normalize("atlas", ".json"))) {
+            case Result.Value(var value) -> metadata = value;
+
+            case Result.Error(var error, var _) ->
+                throw new IOException("Failed to read metadata " + identifier + ": " + error.get());
+        }
+
+        try (var scope = StructuredTaskScope.open()) {
+            for (var metadatum : metadata) {
+                scope.fork(() -> {
+                    NativeTexture texture;
+                    try {
+                        texture = readNativeTexture(metadatum.texture(), textureFormat);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to read texture " + metadatum.texture());
+                    }
+
+                    return texture;
+                });
+            }
+        }
+
+        var created = new VulkanSpriteAtlas(renderer, this, textureFormat);
+
+        var existing = textureLock.write(() -> textures.putIfAbsent(identifier, created));
+        if (existing != null) {
+            created.close();
+
+            if (existing instanceof SpriteAtlas atlas) {
+                return atlas;
+            }
+        }
+
+        return created;
     }
 
     @Override
@@ -199,8 +289,8 @@ public final class VulkanTextureManager implements TextureManager, AutoCloseable
         }
     }
 
-    //TODO Delete this?
-    public Optional<VulkanTexture> getTexture(Identifier identifier) {
+    @NotNull
+    public Optional<Texture> getTexture(@NotNull Identifier identifier) {
         return Optional.ofNullable(textures.get(identifier));
     }
 

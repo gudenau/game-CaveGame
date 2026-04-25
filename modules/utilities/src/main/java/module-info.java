@@ -1,7 +1,7 @@
+import net.gudenau.cavegame.resource.ResourceProviderProvider;
+
 module net.gudenau.cavegame.utilities {
     exports net.gudenau.cavegame.annotations;
-    exports net.gudenau.cavegame.codec;
-    exports net.gudenau.cavegame.codec.ops;
     exports net.gudenau.cavegame.config;
     exports net.gudenau.cavegame.resource;
     exports net.gudenau.cavegame.util;
@@ -17,5 +17,9 @@ module net.gudenau.cavegame.utilities {
 
     requires org.lwjgl;
 
-    requires com.google.gson;
+    requires net.gudenau.codec;
+    requires net.gudenau.codec.json;
+    requires net.gudenau.json;
+
+    uses ResourceProviderProvider;
 }

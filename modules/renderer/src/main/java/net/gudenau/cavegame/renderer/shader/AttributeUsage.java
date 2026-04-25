@@ -1,7 +1,7 @@
 package net.gudenau.cavegame.renderer.shader;
 
-import net.gudenau.cavegame.codec.Codec;
-import net.gudenau.cavegame.codec.CodecBuilder;
+
+import net.gudenau.codec.Codec;
 
 public enum AttributeUsage {
     POSITION,
@@ -9,5 +9,5 @@ public enum AttributeUsage {
     TEXTURE_COORD,
     ;
 
-    public static final Codec<AttributeUsage> CODEC = CodecBuilder.ofEnum(AttributeUsage.class);
+    public static final Codec<AttributeUsage> CODEC = Codec.enumeration(AttributeUsage.class);
 }

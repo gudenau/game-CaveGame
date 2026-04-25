@@ -6,9 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
 import org.lwjgl.system.MemoryStack;
 
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Stack;
+import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
@@ -16,9 +14,12 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public abstract class GlfwWindow implements Window {
     private boolean visible = false;
     private final GLFWFramebufferSizeCallback glfwResizeCallback;
-    @Nullable
-    private ResizeCallback resizeCallback = null;
+    @NotNull
+    private SequencedSet<ResizeCallback> resizeCallbacks = new LinkedHashSet<>();
     private final Stack<Screen> screenStack = new Stack<>();
+
+    private int framebufferWidth;
+    private int framebufferHeight;
 
     private final long handle;
 
@@ -35,6 +36,17 @@ public abstract class GlfwWindow implements Window {
             return result;
         });
 
+        var size = GlfwUtils.invokeAndWait(() -> {
+            try (var stack = MemoryStack.stackPush()) {
+                var fbWidth = stack.ints(0);
+                var fbHeight = stack.ints(0);
+                glfwGetFramebufferSize(handle, fbWidth, fbHeight);
+                return new Size(fbWidth.get(0), fbHeight.get(0));
+            }
+        });
+        this.framebufferWidth = size.width();
+        this.framebufferHeight = size.height();
+
         if(handle == NULL) {
             throw new RuntimeException("Failed to create GLFW window");
         }
@@ -42,8 +54,13 @@ public abstract class GlfwWindow implements Window {
 
     private void resizeCallback(long handle, int width, int height) {
         synchronized (this) {
-            if (this.handle == handle && resizeCallback != null) {
-                resizeCallback.invoke(this, width, height);
+            this.framebufferWidth = width;
+            this.framebufferHeight = height;
+
+            screenStack.forEach((screen) -> screen.setSize(width, height));
+
+            if (this.handle == handle) {
+                resizeCallbacks.forEach((callback) -> callback.invoke(this, width, height));
             }
         }
     }
@@ -84,6 +101,9 @@ public abstract class GlfwWindow implements Window {
     @Override
     @NotNull
     public final Size size() {
+        return framebufferSize();
+
+        /* TODO, check to make sure this is correct.
         return GlfwUtils.invokeAndWait(() -> {
             try (var stack = MemoryStack.stackPush()) {
                 var width = stack.ints(0);
@@ -92,12 +112,21 @@ public abstract class GlfwWindow implements Window {
                 return new Size(width.get(0), height.get(0));
             }
         });
+         */
     }
 
     @Override
-    public void resizeCallback(@Nullable ResizeCallback callback) {
+    public ResizeCallback addResizeCallback(@NotNull ResizeCallback callback) {
         synchronized (this) {
-            this.resizeCallback = callback;
+            this.resizeCallbacks.add(callback);
+        }
+        return callback;
+    }
+
+    @Override
+    public void removeResizeCallback(@NotNull ResizeCallback callback) {
+        synchronized (this) {
+            this.resizeCallbacks.remove(callback);
         }
     }
 
@@ -107,18 +136,16 @@ public abstract class GlfwWindow implements Window {
 
     @NotNull
     public final Size framebufferSize() {
-        return GlfwUtils.invokeAndWait(() -> {
-            try (var stack = MemoryStack.stackPush()) {
-                var width = stack.ints(0);
-                var height = stack.ints(0);
-                glfwGetFramebufferSize(handle, width, height);
-                return new Size(width.get(0), height.get(0));
-            }
-        });
+        synchronized (this) {
+            return new Size(framebufferWidth, framebufferHeight);
+        }
     }
 
     @Override
     public void pushScreen(@NotNull Screen screen) {
+        var size = framebufferSize();
+        screen.setSize(size.width(), size.height());
+
         screenStack.push(screen);
     }
 

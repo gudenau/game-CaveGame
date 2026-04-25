@@ -1,4 +1,6 @@
 dependencies {
+    implementation project(':gui')
+
     implementation "it.unimi.dsi:fastutil:${project.fastutilVersion}"
 
     implementation "org.joml:joml:${jomlVersion}"
@@ -17,4 +19,7 @@ dependencies {
 
     implementation 'org.lwjgl:lwjgl-spng'
     runtimeOnly "org.lwjgl:lwjgl-spng::$lwjglNatives"
+
+    implementation "net.gudenau.codec:codec:${project.codecVersion}"
+    implementation "net.gudenau.json:json:${project.jsonVersion}"
 }
